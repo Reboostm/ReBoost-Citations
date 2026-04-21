@@ -13,6 +13,7 @@ import ForgotPassword from '@/pages/ForgotPassword'
 import AdminDashboard from '@/pages/admin/Dashboard'
 import AdminClients from '@/pages/admin/Clients'
 import AdminClientDetail from '@/pages/admin/ClientDetail'
+import AdminUsers from '@/pages/admin/Users'
 import AdminDirectories from '@/pages/admin/Directories'
 import AdminPackages from '@/pages/admin/Packages'
 import AdminJobs from '@/pages/admin/Jobs'
@@ -56,6 +57,7 @@ export default function App() {
             <Route path="clients" element={<AdminClients />} />
             <Route path="clients/:id" element={<AdminClientDetail />} />
             <Route path="clients/:id/edit" element={<AdminClientDetail />} />
+            <Route path="users" element={<AdminUsers />} />
             <Route path="directories" element={<AdminDirectories />} />
             <Route path="packages" element={<AdminPackages />} />
             <Route path="jobs" element={<AdminJobs />} />

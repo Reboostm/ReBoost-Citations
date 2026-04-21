@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, Users, Globe, Package, Briefcase,
+  LayoutDashboard, Users, UserCheck, Globe, Package, Briefcase,
   BarChart2, Settings, LogOut, ChevronRight, Zap,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -10,6 +10,7 @@ import toast from 'react-hot-toast'
 const adminNav = [
   { to: '/admin',             label: 'Dashboard',    icon: LayoutDashboard, end: true },
   { to: '/admin/clients',     label: 'Clients',      icon: Users },
+  { to: '/admin/users',       label: 'Users',        icon: UserCheck },
   { to: '/admin/directories', label: 'Directories',  icon: Globe },
   { to: '/admin/packages',    label: 'Packages',     icon: Package },
   { to: '/admin/jobs',        label: 'Jobs',         icon: Briefcase },

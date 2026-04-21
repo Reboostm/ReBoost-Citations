@@ -33,7 +33,7 @@ export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (r
     const { data } = request
     const context = request.auth
 
-    const { jobId, clientId, packageId, tier } = data
+    const { jobId, clientId, packageId, highCount, mediumCount, lowCount, submittedDirIds } = data
 
     try {
       // Get job, client, and package details
@@ -54,13 +54,20 @@ export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (r
       await db.collection('jobs').doc(jobId).update({ status: 'running' })
       await logToJob(jobId, 'Starting submission job...', 'info')
 
-      // Get directories to submit based on tier
-      let query = db.collection('directories')
-      if (tier && tier !== 'all') {
-        query = query.where('tier', '==', tier)
-      }
-      const dirSnap = await query.limit(pkg.citationCount + 50).get()
-      const directories = dirSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+      // Get directories by tier, sorted by DA descending (highest quality first)
+      const [highDirs, mediumDirs, lowDirs] = await Promise.all([
+        db.collection('directories').where('tier', '==', 'high').orderBy('da', 'desc').limit(highCount + 20).get(),
+        db.collection('directories').where('tier', '==', 'medium').orderBy('da', 'desc').limit(mediumCount + 20).get(),
+        db.collection('directories').where('tier', '==', 'low').orderBy('da', 'desc').limit(lowCount + 20).get(),
+      ])
+
+      // Combine and filter out already-submitted directories
+      const submittedSet = new Set(submittedDirIds || [])
+      const directories = [
+        ...highDirs.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, highCount),
+        ...mediumDirs.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, mediumCount),
+        ...lowDirs.docs.map(d => ({ id: d.id, ...d.data() })).slice(0, lowCount),
+      ].filter(d => !submittedSet.has(d.id))
 
       if (directories.length === 0) {
         await logToJob(jobId, 'No directories found for submission', 'warn')

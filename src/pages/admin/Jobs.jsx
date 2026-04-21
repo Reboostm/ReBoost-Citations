@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Plus, Play, Pause, RefreshCw, Terminal, ChevronDown, ChevronUp, Briefcase } from 'lucide-react'
-import { subscribeToJobs, getClients, getPackages, createJob, updateJob } from '@/services/firestore'
+import { subscribeToJobs, getClients, getPackages, getDirectories, getCitationsForClient, createJob, updateJob } from '@/services/firestore'
 import { startSubmissionJob, pauseSubmissionJob, resumeSubmissionJob } from '@/services/functions'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -17,16 +17,29 @@ import { cn } from '@/utils/cn'
 import toast from 'react-hot-toast'
 
 const schema = z.object({
-  clientId:  z.string().min(1, 'Select a client'),
-  packageId: z.string().min(1, 'Select a package'),
-  tier:      z.enum(['high', 'medium', 'low', 'all']),
+  clientId:     z.string().min(1, 'Select a client'),
+  packageId:    z.string().min(1, 'Select a package'),
+  highCount:    z.coerce.number().min(0),
+  mediumCount:  z.coerce.number().min(0),
+  lowCount:     z.coerce.number().min(0),
 })
 
-function NewJobForm({ clients, packages, onSubmit, loading }) {
-  const { register, handleSubmit, formState: { errors } } = useForm({
+function NewJobForm({ clients, packages, directoryCounts, onSubmit, loading }) {
+  const { register, handleSubmit, formState: { errors }, watch } = useForm({
     resolver: zodResolver(schema),
-    defaultValues: { clientId: '', packageId: '', tier: 'all' },
+    defaultValues: {
+      clientId: '',
+      packageId: '',
+      highCount: Math.floor((directoryCounts.high || 0) * 0.3),
+      mediumCount: Math.floor((directoryCounts.medium || 0) * 0.5),
+      lowCount: Math.floor((directoryCounts.low || 0) * 0.2),
+    },
   })
+
+  const highCount = watch('highCount')
+  const mediumCount = watch('mediumCount')
+  const lowCount = watch('lowCount')
+  const total = (highCount || 0) + (mediumCount || 0) + (lowCount || 0)
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -44,16 +57,87 @@ function NewJobForm({ clients, packages, onSubmit, loading }) {
         error={errors.packageId?.message}
         {...register('packageId')}
       />
-      <Select
-        label="Directory Tier Filter"
-        options={[
-          { value: 'all',    label: 'All Tiers' },
-          { value: 'high',   label: 'High Authority Only (DA 50+)' },
-          { value: 'medium', label: 'Medium Authority Only (DA 20–49)' },
-          { value: 'low',    label: 'Low Authority Only (DA <20)' },
-        ]}
-        {...register('tier')}
-      />
+
+      <div className="space-y-3">
+        <label className="block text-sm font-medium text-gray-900">Directory Selection</label>
+
+        {/* High Authority */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm text-gray-700">High Authority (DA 50+)</label>
+            <span className="text-xs text-gray-500">{directoryCounts.high || 0} available</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max={directoryCounts.high || 0}
+            {...register('highCount')}
+            className="w-full"
+          />
+          <input
+            type="number"
+            min="0"
+            max={directoryCounts.high || 0}
+            {...register('highCount')}
+            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+        </div>
+
+        {/* Medium Authority */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm text-gray-700">Medium Authority (DA 20–49)</label>
+            <span className="text-xs text-gray-500">{directoryCounts.medium || 0} available</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max={directoryCounts.medium || 0}
+            {...register('mediumCount')}
+            className="w-full"
+          />
+          <input
+            type="number"
+            min="0"
+            max={directoryCounts.medium || 0}
+            {...register('mediumCount')}
+            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
+          />
+        </div>
+
+        {/* Low Authority */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm text-gray-700">Low Authority (DA &lt;20)</label>
+            <span className="text-xs text-gray-500">{directoryCounts.low || 0} available</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max={directoryCounts.low || 0}
+            {...register('lowCount')}
+            className="w-full"
+          />
+          <input
+            type="number"
+            min="0"
+            max={directoryCounts.low || 0}
+            {...register('lowCount')}
+            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500"
+          />
+        </div>
+
+        {/* Total summary */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+          <p className="text-sm font-medium text-blue-900">
+            Total selected: <strong>{total.toLocaleString()}</strong> directories
+          </p>
+          <p className="text-xs text-blue-700 mt-1">
+            High: {highCount} | Medium: {mediumCount} | Low: {lowCount}
+          </p>
+        </div>
+      </div>
+
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
         <strong>Note:</strong> The submission engine will run Playwright inside Firebase Cloud Functions. Processing happens asynchronously — monitor progress in the job logs below.
       </div>
@@ -160,14 +244,24 @@ export default function Jobs() {
   const [jobs, setJobs]       = useState([])
   const [clients, setClients] = useState([])
   const [packages, setPackages] = useState([])
+  const [directoryCounts, setDirectoryCounts] = useState({ high: 0, medium: 0, low: 0 })
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
   const [starting, setStarting] = useState(false)
 
   useEffect(() => {
-    Promise.all([getClients(), getPackages()]).then(([c, p]) => {
+    Promise.all([getClients(), getPackages(), getDirectories()]).then(([c, p, dirs]) => {
       setClients(c)
       setPackages(p)
+
+      // Count directories by tier
+      const counts = { high: 0, medium: 0, low: 0 }
+      dirs.forEach(dir => {
+        if (dir.tier === 'high') counts.high++
+        else if (dir.tier === 'medium') counts.medium++
+        else if (dir.tier === 'low') counts.low++
+      })
+      setDirectoryCounts(counts)
     })
 
     const unsub = subscribeToJobs(data => {
@@ -183,21 +277,36 @@ export default function Jobs() {
       const client  = clients.find(c => c.id === data.clientId)
       const pkg     = packages.find(p => p.id === data.packageId)
 
+      // Get already-submitted directories for this client
+      const citations = await getCitationsForClient(data.clientId)
+      const submittedDirIds = new Set(citations.map(c => c.directoryId))
+
       const jobId = await createJob({
         clientId:    data.clientId,
         clientName:  client?.businessName ?? 'Unknown',
         packageId:   data.packageId,
         packageName: pkg?.name ?? 'Unknown',
-        tier:        data.tier,
+        highCount:   data.highCount,
+        mediumCount: data.mediumCount,
+        lowCount:    data.lowCount,
         status:      'pending',
         progress:    0,
         total:       pkg?.citationCount ?? 0,
         logs:        [],
+        submittedDirIds: Array.from(submittedDirIds),
       })
 
       // Trigger the Cloud Function
       try {
-        await startSubmissionJob({ jobId, clientId: data.clientId, packageId: data.packageId, tier: data.tier })
+        await startSubmissionJob({
+          jobId,
+          clientId: data.clientId,
+          packageId: data.packageId,
+          highCount: data.highCount,
+          mediumCount: data.mediumCount,
+          lowCount: data.lowCount,
+          submittedDirIds: Array.from(submittedDirIds),
+        })
       } catch (fnErr) {
         // Function may not be deployed yet — job is still queued in Firestore
         await updateJob(jobId, { status: 'pending', logs: [{ type: 'warn', message: 'Cloud Function not yet deployed — job queued. Deploy functions to begin automation.', timestamp: new Date().toISOString() }] })
@@ -253,8 +362,8 @@ export default function Jobs() {
         </div>
       )}
 
-      <Modal open={showNew} onClose={() => setShowNew(false)} title="New Submission Job" size="md">
-        <NewJobForm clients={clients} packages={packages} onSubmit={handleStart} loading={starting} />
+      <Modal open={showNew} onClose={() => setShowNew(false)} title="New Submission Job" size="lg">
+        <NewJobForm clients={clients} packages={packages} directoryCounts={directoryCounts} onSubmit={handleStart} loading={starting} />
       </Modal>
     </div>
   )
