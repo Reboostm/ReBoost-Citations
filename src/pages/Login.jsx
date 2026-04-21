@@ -28,6 +28,7 @@ export default function Login() {
     try {
       await login(email, password)
       toast.success('Welcome back!')
+      navigate(isAdmin ? '/admin' : '/dashboard')
     } catch (err) {
       toast.error(err.code === 'auth/invalid-credential' ? 'Invalid email or password' : err.message)
     } finally {
