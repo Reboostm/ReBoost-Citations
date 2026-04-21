@@ -7,6 +7,7 @@ import AdminSetup from '@/components/AdminSetup'
 
 // Auth pages
 import Login from '@/pages/Login'
+import Signup from '@/pages/Signup'
 import ForgotPassword from '@/pages/ForgotPassword'
 
 // Admin pages
@@ -42,6 +43,7 @@ export default function App() {
         <Routes>
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
 
           {/* Admin Routes */}
