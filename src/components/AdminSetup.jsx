@@ -5,12 +5,14 @@ import { functions } from '@/services/firebase'
 import Button from '@/components/ui/Button'
 import toast from 'react-hot-toast'
 
+const OWNER_EMAIL = 'marketingreboost@gmail.com'
+
 export default function AdminSetup() {
   const { currentUser, userProfile } = useAuth()
   const [loading, setLoading] = useState(false)
 
-  // Only show if user is not yet admin
-  if (!currentUser || userProfile?.role === 'admin') {
+  // Only show if user is the owner but not yet admin
+  if (!currentUser || currentUser.email !== OWNER_EMAIL || userProfile?.role === 'admin') {
     return null
   }
 
