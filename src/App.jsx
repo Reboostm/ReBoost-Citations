@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import AdminLayout from '@/components/layout/AdminLayout'
 import ClientLayout from '@/components/layout/ClientLayout'
+import AdminSetup from '@/components/AdminSetup'
 
 // Auth pages
 import Login from '@/pages/Login'
@@ -93,6 +94,7 @@ export default function App() {
             error: { style: { color: '#dc2626' } },
           }}
         />
+        <AdminSetup />
       </AuthProvider>
     </BrowserRouter>
   )

@@ -17,7 +17,12 @@
       "mcp__Claude_in_Chrome__form_input",
       "mcp__Claude_in_Chrome__read_network_requests",
       "mcp__Claude_in_Chrome__read_page",
-      "mcp__Claude_in_Chrome__javascript_tool"
+      "mcp__Claude_in_Chrome__javascript_tool",
+      "Bash(node -e ' *)",
+      "Bash(npx firebase *)",
+      "Bash(node call-make-admin.mjs)",
+      "Bash(curl -X PATCH 'https://firestore.googleapis.com/v1/projects/reboost-citations/databases/\\(default\\)/documents/users/bE1mHUmjjPdBgH3CKkS6Hx48CTp1?key=AIzaSyAt7E302aEZJSJh_Kzcheg22kOcAFBfPeY' -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(python3 -c ' *)"
     ]
   }
 }

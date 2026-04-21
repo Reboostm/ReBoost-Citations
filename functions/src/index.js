@@ -294,3 +294,17 @@ export const generatePdfReport = https.onCall({ timeoutSeconds: 300 }, async (re
       throw new https.HttpsError('internal', err.message)
     }
   })
+
+// ─── Setup Helper: Make User Admin ────────────────────────────────────────
+
+export const makeUserAdmin = https.onCall(async (request) => {
+  const userId = request.auth?.uid
+  if (!userId) throw new https.HttpsError('unauthenticated', 'Not authenticated')
+
+  const { targetUserId } = request.data
+  if (!targetUserId) throw new https.HttpsError('invalid-argument', 'targetUserId required')
+
+  // Make the user admin
+  await db.collection('users').doc(targetUserId).set({ role: 'admin' }, { merge: true })
+  return { success: true }
+})
