@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Plus, Search, Globe, ExternalLink, Pencil, Trash2, Filter, Upload } from 'lucide-react'
-import { getDirectories, createDirectory, updateDirectory, deleteDirectory } from '@/services/firestore'
+import { Plus, Search, Globe, ExternalLink, Pencil, Trash2, Filter, Upload, Trash } from 'lucide-react'
+import { getDirectories, createDirectory, updateDirectory, deleteDirectory, deleteDirectories } from '@/services/firestore'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -83,6 +83,8 @@ export default function Directories() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [saving, setSaving]     = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [bulkDeleteCount, setBulkDeleteCount] = useState(0)
 
   const load = async () => {
     const data = await getDirectories()
@@ -135,6 +137,35 @@ export default function Directories() {
     finally { setDeleting(false) }
   }
 
+  const handleToggleSelect = (id) => {
+    const newSelected = new Set(selectedIds)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedIds(newSelected)
+  }
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filtered.map(d => d.id)))
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    setDeleting(true)
+    try {
+      await deleteDirectories(Array.from(selectedIds))
+      toast.success(`Deleted ${selectedIds.size} directories`)
+      setSelectedIds(new Set())
+      load()
+    } catch (err) { toast.error(err.message) }
+    finally { setDeleting(false) }
+  }
+
   if (loading) return <PageLoader />
 
   const categories = [...new Set(dirs.map(d => d.category))].sort()
@@ -146,6 +177,14 @@ export default function Directories() {
         subtitle={`${filtered.length.toLocaleString()} of ${dirs.length.toLocaleString()} directories`}
         action={
           <div className="flex gap-2">
+            {selectedIds.size > 0 && (
+              <button
+                onClick={() => setBulkDeleteCount(selectedIds.size)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+              >
+                <Trash className="w-4 h-4" /> Delete {selectedIds.size} Selected
+              </button>
+            )}
             <Button variant="secondary" onClick={() => setShowImport(true)}><Upload className="w-4 h-4" /> Import CSV</Button>
             <Button onClick={() => setShowAdd(true)}><Plus className="w-4 h-4" /> Add Directory</Button>
           </div>
@@ -179,6 +218,14 @@ export default function Directories() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
+                  <th className="px-5 py-3 text-left">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.size === filtered.length && filtered.length > 0}
+                      onChange={handleSelectAll}
+                      className="rounded border-gray-300 text-brand-600 cursor-pointer"
+                    />
+                  </th>
                   <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Directory</th>
                   <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Category</th>
                   <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">DA</th>
@@ -189,7 +236,15 @@ export default function Directories() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filtered.slice(0, 100).map(dir => (
-                  <tr key={dir.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={dir.id} className={`hover:bg-gray-50 transition-colors ${selectedIds.has(dir.id) ? 'bg-blue-50' : ''}`}>
+                    <td className="px-5 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(dir.id)}
+                        onChange={() => handleToggleSelect(dir.id)}
+                        className="rounded border-gray-300 text-brand-600 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
                         <Globe className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -246,6 +301,14 @@ export default function Directories() {
         loading={deleting}
         title="Delete Directory"
         message={`Delete "${deleteTarget?.name}"? This cannot be undone.`}
+      />
+      <ConfirmDialog
+        open={bulkDeleteCount > 0}
+        onClose={() => setBulkDeleteCount(0)}
+        onConfirm={handleBulkDelete}
+        loading={deleting}
+        title="Delete Directories"
+        message={`Delete ${bulkDeleteCount} selected directories? This cannot be undone.`}
       />
     </div>
   )

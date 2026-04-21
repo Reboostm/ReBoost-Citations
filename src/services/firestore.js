@@ -80,6 +80,14 @@ export const createDirectory = (data) => createDocument('directories', data)
 export const updateDirectory = (id, data) => updateDocument('directories', id, data)
 export const deleteDirectory = (id) => deleteDocument('directories', id)
 
+export const deleteDirectories = async (directoryIds) => {
+  const batch = writeBatch(db)
+  for (const id of directoryIds) {
+    batch.delete(doc(db, 'directories', id))
+  }
+  await batch.commit()
+}
+
 // ─── Citations ───────────────────────────────────────────────────────────────
 
 export const getCitationsForClient = (clientId) =>
