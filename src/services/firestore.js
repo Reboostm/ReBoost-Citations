@@ -135,6 +135,21 @@ export const deletePackage = (id) => deleteDocument('packages', id)
 // ─── Users ───────────────────────────────────────────────────────────────────
 
 export const getUser = (uid) => getDocument('users', uid)
+
+export const getUserOrCreate = async (uid, email) => {
+  const user = await getDocument('users', uid)
+  if (user) return user
+
+  // Auto-create user document on first login
+  await createUser(uid, {
+    email,
+    role: 'client',
+    clientId: null,
+  })
+
+  return { id: uid, email, role: 'client', clientId: null }
+}
+
 export const createUser = (uid, data) => createDocument('users', data, uid)
 export const updateUser = (uid, data) => updateDocument('users', uid, data)
 export const getAdminUsers = () => getCollection('users', [where('role', '==', 'admin')])

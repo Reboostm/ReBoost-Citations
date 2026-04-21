@@ -1,15 +1,16 @@
-import * as functions from 'firebase-functions'
-import * as admin from 'firebase-admin'
+import { https, setGlobalOptions } from 'firebase-functions'
+import admin from 'firebase-admin'
 import { chromium } from 'playwright'
 import axios from 'axios'
+
+setGlobalOptions({ region: 'us-central1', memory: '2GB' })
 
 admin.initializeApp()
 const db = admin.firestore()
 
-const config = functions.config()
-const CAPTCHA_KEY = process.env.CAPTCHA_API_KEY || config.captcha?.key
-const CSE_KEY     = process.env.GOOGLE_CSE_KEY || config.google?.cse_key
-const CSE_ID      = process.env.GOOGLE_CSE_ID || config.google?.cse_id
+const CAPTCHA_KEY = process.env.CAPTCHA_API_KEY
+const CSE_KEY     = process.env.GOOGLE_CSE_KEY
+const CSE_ID      = process.env.GOOGLE_CSE_ID
 
 // ─── Utility: Log entry to job ─────────────────────────────────────────────
 
@@ -27,10 +28,10 @@ async function logToJob(jobId, message, type = 'info') {
 
 // ─── Cloud Function: Start Submission Job ──────────────────────────────────
 
-export const startSubmissionJob = functions
-  .runWith({ timeoutSeconds: 540, memory: '2GB' })
-  .https.onCall(async (data, context) => {
-    if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Not authenticated')
+export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (request) => {
+    if (!request.auth) throw new https.HttpsError('unauthenticated', 'Not authenticated')
+    const { data } = request
+    const context = request.auth
 
     const { jobId, clientId, packageId, tier } = data
 
@@ -201,14 +202,15 @@ export const startSubmissionJob = functions
     } catch (err) {
       await logToJob(jobId, `Fatal error: ${err.message}`, 'error')
       await db.collection('jobs').doc(jobId).update({ status: 'failed' })
-      throw new functions.https.HttpsError('internal', err.message)
+      throw new https.HttpsError('internal', err.message)
     }
   })
 
 // ─── Cloud Function: Pause Job ────────────────────────────────────────────
 
-export const pauseSubmissionJob = functions.https.onCall(async (data, context) => {
-  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Not authenticated')
+export const pauseSubmissionJob = https.onCall(async (request) => {
+  if (!request.auth) throw new https.HttpsError('unauthenticated', 'Not authenticated')
+  const { data } = request
   const { jobId } = data
   await db.collection('jobs').doc(jobId).update({ status: 'paused' })
   return { success: true }
@@ -216,8 +218,9 @@ export const pauseSubmissionJob = functions.https.onCall(async (data, context) =
 
 // ─── Cloud Function: Resume Job ───────────────────────────────────────────
 
-export const resumeSubmissionJob = functions.https.onCall(async (data, context) => {
-  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Not authenticated')
+export const resumeSubmissionJob = https.onCall(async (request) => {
+  if (!request.auth) throw new https.HttpsError('unauthenticated', 'Not authenticated')
+  const { data } = request
   const { jobId } = data
   await db.collection('jobs').doc(jobId).update({ status: 'running' })
   // Optionally re-trigger the submission logic for remaining directories
@@ -226,14 +229,15 @@ export const resumeSubmissionJob = functions.https.onCall(async (data, context) 
 
 // ─── Cloud Function: Citation Audit ───────────────────────────────────────
 
-export const runCitationAudit = functions.https.onCall(async (data, context) => {
-  if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Not authenticated')
+export const runCitationAudit = https.onCall(async (request) => {
+  if (!request.auth) throw new https.HttpsError('unauthenticated', 'Not authenticated')
+  const { data } = request
 
   const { clientId } = data
   const client = (await db.collection('clients').doc(clientId).get()).data()
 
   if (!client || !CSE_KEY || !CSE_ID) {
-    throw new functions.https.HttpsError('failed-precondition', 'Client not found or Google CSE not configured')
+    throw new https.HttpsError('failed-precondition', 'Client not found or Google CSE not configured')
   }
 
   try {
@@ -257,16 +261,15 @@ export const runCitationAudit = functions.https.onCall(async (data, context) => 
 
     return { success: true, citations: results }
   } catch (err) {
-    throw new functions.https.HttpsError('internal', err.message)
+    throw new https.HttpsError('internal', err.message)
   }
 })
 
 // ─── Cloud Function: Generate PDF Report ──────────────────────────────────
 
-export const generatePdfReport = functions
-  .runWith({ timeoutSeconds: 300, memory: '1GB' })
-  .https.onCall(async (data, context) => {
-    if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Not authenticated')
+export const generatePdfReport = https.onCall({ timeoutSeconds: 300 }, async (request) => {
+    if (!request.auth) throw new https.HttpsError('unauthenticated', 'Not authenticated')
+    const { data } = request
 
     const { clientId } = data
 
@@ -288,6 +291,6 @@ export const generatePdfReport = functions
         citationCount: citations.size,
       }
     } catch (err) {
-      throw new functions.https.HttpsError('internal', err.message)
+      throw new https.HttpsError('internal', err.message)
     }
   })

@@ -7,7 +7,7 @@ import {
   sendPasswordResetEmail,
 } from 'firebase/auth'
 import { auth } from '@/services/firebase'
-import { getUser, createUser } from '@/services/firestore'
+import { getUserOrCreate, createUser } from '@/services/firestore'
 
 const AuthContext = createContext(null)
 
@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user)
       if (user) {
-        const profile = await getUser(user.uid)
+        const profile = await getUserOrCreate(user.uid, user.email)
         setUserProfile(profile)
       } else {
         setUserProfile(null)
