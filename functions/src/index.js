@@ -315,3 +315,97 @@ export const makeUserAdmin = https.onCall(async (request) => {
   await db.collection('users').doc(targetUserId).set({ role: 'admin' }, { merge: true })
   return { success: true }
 })
+
+// ─── Create User with Optional Client ────────────────────────────────────────
+
+export const createUserWithClient = https.onCall(async (request) => {
+  const { email, password, role = 'client', businessData } = request.data
+
+  // Validate inputs
+  if (!email || !password) {
+    throw new https.HttpsError('invalid-argument', 'Email and password required')
+  }
+
+  if (password.length < 8) {
+    throw new https.HttpsError('invalid-argument', 'Password must be at least 8 characters')
+  }
+
+  if (!['admin', 'client'].includes(role)) {
+    throw new https.HttpsError('invalid-argument', 'Role must be admin or client')
+  }
+
+  try {
+    // 1. Create Firebase Auth user
+    const userRecord = await admin.auth().createUser({
+      email,
+      password,
+    })
+
+    let clientId = null
+
+    // 2. If businessData provided, create client and generate dummy email
+    if (businessData && role === 'client') {
+      // Generate dummy email: reboostcitations+companyname@gmail.com
+      const baseName = businessData.businessName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+      let dummyEmail = `reboostcitations+${baseName}@gmail.com`
+      let counter = 1
+
+      // Check if dummy email exists and increment if needed
+      while (true) {
+        const existing = await db
+          .collection('clients')
+          .where('dummyEmail', '==', dummyEmail)
+          .limit(1)
+          .get()
+
+        if (existing.empty) break
+
+        dummyEmail = `reboostcitations+${baseName}${counter}@gmail.com`
+        counter++
+      }
+
+      // Create client document
+      const clientRef = await db.collection('clients').add({
+        ...businessData,
+        dummyEmail,
+        dummyEmailPassword: 'reboostcitations123!',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      })
+
+      clientId = clientRef.id
+    }
+
+    // 3. Create Firestore user document
+    await db.collection('users').doc(userRecord.uid).set({
+      email,
+      role,
+      clientId: clientId || null,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
+
+    return {
+      success: true,
+      userId: userRecord.uid,
+      clientId: clientId,
+      email,
+      dummyEmail: clientId ? (businessData ? `reboostcitations+${businessData.businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}@gmail.com` : null) : null,
+    }
+  } catch (err) {
+    // Handle specific Firebase Auth errors
+    if (err.code === 'auth/email-already-exists') {
+      throw new https.HttpsError('already-exists', 'Email already in use')
+    }
+    if (err.code === 'auth/invalid-email') {
+      throw new https.HttpsError('invalid-argument', 'Invalid email address')
+    }
+    if (err.code === 'auth/weak-password') {
+      throw new https.HttpsError('invalid-argument', 'Password is too weak')
+    }
+
+    throw new https.HttpsError('internal', err.message)
+  }
+})
