@@ -23,7 +23,10 @@
       "Bash(node call-make-admin.mjs)",
       "Bash(curl -X PATCH 'https://firestore.googleapis.com/v1/projects/reboost-citations/databases/\\(default\\)/documents/users/bE1mHUmjjPdBgH3CKkS6Hx48CTp1?key=AIzaSyAt7E302aEZJSJh_Kzcheg22kOcAFBfPeY' -H 'Content-Type: application/json' -d '{ *)",
       "Bash(python3 -c ' *)",
-      "Bash(curl -s -X POST 'https://firestore.googleapis.com/v1/projects/reboost-citations/databases/\\(default\\)/documents/users?documentId=GOMrqfDyfUNzYsx10siuns9ympg2&key=AIzaSyAt7E302aEZJSJh_Kzcheg22kOcAFBfPeY' -H 'Content-Type: application/json' -d '{ *)"
+      "Bash(curl -s -X POST 'https://firestore.googleapis.com/v1/projects/reboost-citations/databases/\\(default\\)/documents/users?documentId=GOMrqfDyfUNzYsx10siuns9ympg2&key=AIzaSyAt7E302aEZJSJh_Kzcheg22kOcAFBfPeY' -H 'Content-Type: application/json' -d '{ *)",
+      "WebSearch",
+      "WebFetch(domain:www.brightlocal.com)",
+      "WebFetch(domain:www.w3era.com)"
     ]
   }
 }

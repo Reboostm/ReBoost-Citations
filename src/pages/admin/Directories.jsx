@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Search, Globe, ExternalLink, Pencil, Trash2, Filter } from 'lucide-react'
+import { Plus, Search, Globe, ExternalLink, Pencil, Trash2, Filter, Upload } from 'lucide-react'
 import { getDirectories, createDirectory, updateDirectory, deleteDirectory } from '@/services/firestore'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -11,6 +11,7 @@ import Modal from '@/components/ui/Modal'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import Badge from '@/components/ui/Badge'
 import EmptyState from '@/components/ui/EmptyState'
+import DirectoryImporter from '@/components/DirectoryImporter'
 import PageHeader from '@/components/layout/PageHeader'
 import { PageLoader } from '@/components/ui/Spinner'
 import { tierColor } from '@/utils/helpers'
@@ -77,6 +78,7 @@ export default function Directories() {
   const [filterTier, setFilterTier] = useState('')
   const [filterCat, setFilterCat]   = useState('')
   const [showAdd, setShowAdd]   = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [editing, setEditing]   = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [saving, setSaving]     = useState(false)
@@ -142,7 +144,12 @@ export default function Directories() {
       <PageHeader
         title="Directory Database"
         subtitle={`${filtered.length.toLocaleString()} of ${dirs.length.toLocaleString()} directories`}
-        action={<Button onClick={() => setShowAdd(true)}><Plus className="w-4 h-4" /> Add Directory</Button>}
+        action={
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setShowImport(true)}><Upload className="w-4 h-4" /> Import CSV</Button>
+            <Button onClick={() => setShowAdd(true)}><Plus className="w-4 h-4" /> Add Directory</Button>
+          </div>
+        }
       />
 
       {/* Filters */}
@@ -228,6 +235,9 @@ export default function Directories() {
       </Modal>
       <Modal open={!!editing} onClose={() => setEditing(null)} title="Edit Directory" size="md">
         {editing && <DirectoryForm directory={editing} onSubmit={handleEdit} loading={saving} />}
+      </Modal>
+      <Modal open={showImport} onClose={() => setShowImport(false)} title="Import Directories from CSV" size="lg">
+        <DirectoryImporter onComplete={() => { setShowImport(false); load() }} />
       </Modal>
       <ConfirmDialog
         open={!!deleteTarget}

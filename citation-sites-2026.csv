@@ -1,0 +1,79 @@
+name,url,submissionUrl,category,da,tier,type
+Google Business Profile,https://mybusiness.google.com,https://mybusiness.google.com,General Business,98,high,web_form
+Apple Business Connect,https://businessconnect.apple.com,https://businessconnect.apple.com,General Business,100,high,web_form
+Bing Places for Business,https://www.bingplaces.com,https://www.bingplaces.com/business,General Business,94,high,web_form
+Yelp Business,https://biz.yelp.com,https://biz.yelp.com,General Business,93,high,web_form
+Foursquare,https://foursquare.com,https://business.foursquare.com,General Business,91,high,web_form
+Facebook Business,https://facebook.com/business,https://facebook.com/business/pages/create,General Business,90,high,web_form
+LinkedIn Company,https://www.linkedin.com,https://www.linkedin.com/company/,General Business,89,high,web_form
+Better Business Bureau,https://www.bbb.org,https://www.bbb.org,General Business,86,high,web_form
+Yellow Pages,https://www.yellowpages.com,https://www.yellowpages.com/business-profiles,General Business,82,high,web_form
+Angi,https://www.angi.com,https://www.angi.com/companypage,Home Services,78,high,web_form
+Manta,https://www.manta.com,https://www.manta.com,General Business,74,high,web_form
+CitySearch,https://www.citysearch.com,https://www.citysearch.com,General Business,72,high,web_form
+MapQuest,https://www.mapquest.com,https://www.mapquest.com,General Business,70,high,web_form
+Waze,https://www.waze.com,https://www.waze.com,General Business,70,high,web_form
+Trustpilot,https://www.trustpilot.com,https://www.trustpilot.com/business/join,General Business,80,high,web_form
+Chamber of Commerce,https://www.chamberofcommerce.com,https://www.chamberofcommerce.com,General Business,65,medium,web_form
+Superpages,https://superpages.com,https://superpages.com,General Business,68,medium,web_form
+DexKnows,https://www.dexknows.com,https://www.dexknows.com,General Business,62,medium,web_form
+Cylex,https://cylex.us.com,https://cylex.us.com,General Business,58,medium,web_form
+Hotfrog,https://hotfrog.com,https://hotfrog.com,General Business,56,medium,web_form
+Brownbook,https://brownbook.net,https://brownbook.net,General Business,54,medium,web_form
+Merchant Circle,https://merchantcircle.com,https://merchantcircle.com,General Business,52,medium,web_form
+EZlocal,https://ezlocal.com,https://ezlocal.com,General Business,50,medium,web_form
+ShowMeLocal,https://www.showmelocal.com,https://www.showmelocal.com,General Business,48,medium,web_form
+MerchantCircle,https://merchantcircle.com,https://merchantcircle.com,General Business,50,medium,web_form
+CitySquares,https://citysquares.com,https://citysquares.com,General Business,46,medium,web_form
+Tupalo,https://tupalo.com,https://tupalo.com,General Business,44,medium,web_form
+ProvenExpert,https://provenexpert.com,https://provenexpert.com,General Business,42,medium,web_form
+Zumvu,https://zumvu.com,https://zumvu.com,General Business,40,medium,web_form
+Yellow.place,https://yellow.place,https://yellow.place,General Business,38,medium,web_form
+BOTW,https://botw.org,https://botw.org,General Business,36,medium,web_form
+Nextdoor,https://nextdoor.com,https://nextdoor.com/business,General Business,72,high,web_form
+TripAdvisor,https://tripadvisor.com,https://tripadvisor.com/AddBusiness,Travel & Hospitality,91,high,web_form
+OpenTable,https://opentable.com,https://opentable.com,Restaurant & Food,85,high,web_form
+Healthgrades,https://healthgrades.com,https://healthgrades.com,Medical & Health,84,high,web_form
+Zocdoc,https://zocdoc.com,https://zocdoc.com,Medical & Health,82,high,web_form
+Zillow,https://zillow.com,https://zillow.com,Real Estate,95,high,web_form
+Realtor.com,https://realtor.com,https://realtor.com,Real Estate,88,high,web_form
+Houzz,https://houzz.com,https://houzz.com/professionals,Home Services,86,high,web_form
+Thumbtack,https://thumbtack.com,https://thumbtack.com,Home Services,82,high,web_form
+Avvo,https://avvo.com,https://avvo.com,Legal & Law,81,high,web_form
+FindLaw,https://findlaw.com,https://findlaw.com,Legal & Law,79,high,web_form
+Instagra Business,https://business.instagram.com,https://business.instagram.com,General Business,88,high,web_form
+Instagram,https://instagram.com,https://instagram.com,General Business,88,high,web_form
+Twitter/X Business,https://business.twitter.com,https://business.twitter.com,General Business,87,high,web_form
+OpenStreetMap,https://openstreetmap.org,https://openstreetmap.org,General Business,75,high,web_form
+Kompass,https://kompass.com,https://kompass.com,General Business,60,medium,web_form
+Ailoq,https://ailoq.com,https://ailoq.com,General Business,35,medium,web_form
+Just Landed,https://justlanded.com,https://justlanded.com,General Business,45,medium,web_form
+Zeemaps,https://zeemaps.com,https://zeemaps.com,General Business,32,low,web_form
+The Dots,https://the-dots.com,https://the-dots.com,General Business,38,medium,web_form
+TrepUp,https://trepup.com,https://trepup.com,General Business,28,low,web_form
+Callupcontact,https://callupcontact.com,https://callupcontact.com,General Business,26,low,web_form
+Twidloo,https://twidloo.com,https://twidloo.com,General Business,22,low,web_form
+YPLocal,https://yplocal.us,https://yplocal.us,General Business,20,low,web_form
+Adpost,https://adpost.com,https://adpost.com,General Business,18,low,web_form
+ShowMeLocal,https://showmelocal.com,https://showmelocal.com,General Business,48,medium,web_form
+Startus,https://startus.cc,https://startus.cc,General Business,32,low,web_form
+EnrollBusiness,https://enrollbusiness.com,https://enrollbusiness.com,General Business,30,low,web_form
+Zomato,https://zomato.com,https://zomato.com,Restaurant & Food,88,high,web_form
+Porch,https://porch.com,https://porch.com,Home Services,74,high,web_form
+eLocal,https://elocal.com,https://elocal.com,Home Services,52,medium,web_form
+Google Maps,https://maps.google.com,https://maps.google.com,General Business,98,high,web_form
+Bing Maps,https://www.bing.com/maps,https://www.bing.com/maps,General Business,94,high,web_form
+HERE Maps,https://here.com,https://mapcreator.here.com,General Business,68,medium,web_form
+TomTom,https://tomtom.com,https://tomtom.com,General Business,64,medium,web_form
+GlobalCatalog,https://globalcatalog.com,https://globalcatalog.com,General Business,40,medium,web_form
+LinkCentre,https://linkcentre.com,https://linkcentre.com,General Business,28,low,web_form
+FindIt,https://findit.com,https://findit.com,General Business,35,medium,web_form
+AGreaterTown,https://agreatertown.com,https://agreatertown.com,General Business,32,low,web_form
+Place123,https://place123.net,https://place123.net,General Business,30,low,web_form
+WhoDoYou,https://whodoyou.com,https://whodoyou.com,General Business,25,low,web_form
+1BusinessWorld,https://1businessworld.com,https://1businessworld.com,General Business,22,low,web_form
+Sitejabber,https://sitejabber.com,https://sitejabber.com,General Business,70,high,web_form
+Vitals,https://vitals.com,https://vitals.com,Medical & Health,76,high,web_form
+Localeze,https://neustarlocaleze.biz,https://neustarlocaleze.biz,General Business,58,medium,api
+Data Axle,https://data-axle.com,https://data-axle.com,General Business,55,medium,api
+Acxiom,https://acxiom.com,https://acxiom.com,General Business,52,medium,api
