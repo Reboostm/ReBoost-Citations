@@ -31,7 +31,10 @@ export default function Citations() {
   const [statusFilter, setStatusFilter] = useState('')
 
   useEffect(() => {
-    if (!userProfile?.clientId) return
+    if (!userProfile?.clientId) {
+      setLoading(false)
+      return
+    }
     Promise.all([
       getClient(userProfile.clientId),
       getCitationsForClient(userProfile.clientId),
@@ -71,6 +74,15 @@ export default function Citations() {
   }
 
   if (loading) return <PageLoader />
+
+  if (!client) {
+    return (
+      <div className="p-8 text-center text-gray-500">
+        <p>No client profile associated with your account.</p>
+        <p className="text-xs mt-2">Contact support to get set up.</p>
+      </div>
+    )
+  }
 
   const stats = [
     { label: 'Total', value: citations.length, color: 'text-gray-900' },
