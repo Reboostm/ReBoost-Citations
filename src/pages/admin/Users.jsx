@@ -10,24 +10,40 @@ import Select from '@/components/ui/Select'
 import Modal from '@/components/ui/Modal'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import Badge from '@/components/ui/Badge'
+import Checkbox from '@/components/ui/Checkbox'
 import EmptyState from '@/components/ui/EmptyState'
 import PageHeader from '@/components/layout/PageHeader'
 import { PageLoader } from '@/components/ui/Spinner'
+import { httpsCallable } from 'firebase/functions'
+import { functions } from '@/services/firebase'
 import toast from 'react-hot-toast'
 
-const schema = z.object({
+const createSchema = z.object({
+  email:               z.string().email('Invalid email'),
+  password:            z.string().min(8, 'Password must be at least 8 characters').regex(/[A-Z]/, 'Must contain uppercase letter').regex(/[0-9]/, 'Must contain a number'),
+  role:                z.enum(['admin', 'client']),
+  clientId:            z.string().optional(),
+  sendPasswordReset:   z.boolean().optional(),
+})
+
+const editSchema = z.object({
   email:    z.string().email('Invalid email'),
   role:     z.enum(['admin', 'client']),
   clientId: z.string().optional(),
 })
 
 function UserForm({ user, clients, onSubmit, loading }) {
+  const isCreating = !user
+  const schema = isCreating ? createSchema : editSchema
+
   const { register, handleSubmit, formState: { errors }, watch } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
-      email:    user?.email    ?? '',
-      role:     user?.role     ?? 'client',
-      clientId: user?.clientId ?? '',
+      email:             user?.email    ?? '',
+      password:          '',
+      role:              user?.role     ?? 'client',
+      clientId:          user?.clientId ?? '',
+      sendPasswordReset: false,
     },
   })
 
@@ -39,9 +55,32 @@ function UserForm({ user, clients, onSubmit, loading }) {
         label="Email *"
         type="email"
         placeholder="user@example.com"
+        disabled={!isCreating}
         error={errors.email?.message}
         {...register('email')}
       />
+
+      {isCreating && (
+        <>
+          <Input
+            label="Password *"
+            type="password"
+            placeholder="••••••••"
+            hint="At least 8 chars, one uppercase, one number"
+            error={errors.password?.message}
+            {...register('password')}
+          />
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              {...register('sendPasswordReset')}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm text-gray-700">Also send password reset email</span>
+          </label>
+        </>
+      )}
+
       <Select
         label="Role *"
         options={[
@@ -63,9 +102,11 @@ function UserForm({ user, clients, onSubmit, loading }) {
           {...register('clientId')}
         />
       )}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
-        <strong>Note:</strong> User must be created in Firebase Authentication first. This links them to a client and role.
+
+      <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-800">
+        <strong>✓ Auth Setup:</strong> Creating user will automatically set up Firebase Authentication. User can log in immediately with provided password.
       </div>
+
       <div className="flex justify-end">
         <Button type="submit" loading={loading}>
           {user ? 'Update User' : 'Create User'}
@@ -117,12 +158,42 @@ export default function Users() {
   const handleAdd = async (data) => {
     setSaving(true)
     try {
-      const uid = await createUser(data.email || Date.now().toString(), data)
-      toast.success('User created!')
+      // Call Cloud Function to create Firebase Auth user + Firestore user
+      const createUserWithClient = httpsCallable(functions, 'createUserWithClient')
+
+      const response = await createUserWithClient({
+        email: data.email,
+        password: data.password,
+        role: data.role,
+        businessData: null, // Admin creation doesn't create client
+      })
+
+      // Send password reset email if requested
+      if (data.sendPasswordReset) {
+        try {
+          await fetch('https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=' +
+            import.meta.env.VITE_FIREBASE_API_KEY, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              requestType: 'PASSWORD_RESET',
+              email: data.email,
+            }),
+          })
+          toast.success(`User created! Password reset email sent to ${data.email}`)
+        } catch {
+          toast.success(`User created! (Password reset email could not be sent)`)
+        }
+      } else {
+        toast.success(`User created with email: ${data.email}`)
+      }
+
       setShowAdd(false)
       load()
     } catch (err) {
-      toast.error(err.message)
+      let errorMsg = err.message
+      if (err.message?.includes('Email already')) errorMsg = 'Email already in use'
+      toast.error(errorMsg)
     } finally {
       setSaving(false)
     }
