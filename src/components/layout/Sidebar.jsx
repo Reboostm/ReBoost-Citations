@@ -15,6 +15,7 @@ const adminNav = [
   { to: '/admin/packages',    label: 'Packages',     icon: Package },
   { to: '/admin/jobs',        label: 'Jobs',         icon: Briefcase },
   { to: '/admin/reports',     label: 'Reports',      icon: BarChart2 },
+  { to: '/admin/settings',    label: 'Settings',     icon: Settings },
 ]
 
 const clientNav = [

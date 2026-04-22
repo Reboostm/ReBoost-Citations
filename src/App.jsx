@@ -20,6 +20,7 @@ import AdminPackages from '@/pages/admin/Packages'
 import AdminJobs from '@/pages/admin/Jobs'
 import AdminReports from '@/pages/admin/Reports'
 import AdminCitationAudit from '@/pages/admin/CitationAudit'
+import AdminSettings from '@/pages/admin/Settings'
 
 // Client pages
 import ClientDashboard from '@/pages/client/Dashboard'
@@ -65,6 +66,7 @@ export default function App() {
             <Route path="jobs" element={<AdminJobs />} />
             <Route path="reports" element={<AdminReports />} />
             <Route path="audit" element={<AdminCitationAudit />} />
+            <Route path="settings" element={<AdminSettings />} />
           </Route>
 
           {/* Client Routes */}
