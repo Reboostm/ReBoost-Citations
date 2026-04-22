@@ -444,6 +444,163 @@ export const makeUserAdmin = https.onCall(async (request) => {
   return { success: true }
 })
 
+// ─── Email Verification Automation ────────────────────────────────────────────
+
+export const verifyPendingEmails = https.onCall(async (request) => {
+  if (!request.auth) throw new https.HttpsError('unauthenticated', 'Not authenticated')
+
+  // Check for IMAP credentials
+  const gmailPassword = process.env.GMAIL_APP_PASSWORD
+  const gmailAddress = process.env.GMAIL_ADDRESS || 'reboostcitations@gmail.com'
+
+  if (!gmailPassword) {
+    throw new https.HttpsError('failed-precondition', 'Gmail app password not configured')
+  }
+
+  try {
+    const Imap = require('imap')
+    const { simpleParser } = require('mailparser')
+
+    // Connect to Gmail IMAP
+    const imap = new Imap({
+      user: gmailAddress,
+      password: gmailPassword,
+      host: 'imap.gmail.com',
+      port: 993,
+      tls: true,
+    })
+
+    let verifiedCount = 0
+    let processedCount = 0
+
+    // Search for unread emails with 'verify' or 'confirm' in subject
+    const searchCriteria = ['UNSEEN', ['HEADER', 'SUBJECT', 'verify']]
+
+    const openInbox = (cb) => {
+      imap.openBox('INBOX', false, cb)
+    }
+
+    imap.openBox('INBOX', false, async (err, box) => {
+      if (err) throw err
+
+      // Find emails with verify/confirm
+      imap.search(['UNSEEN', ['OR', ['HEADER', 'SUBJECT', 'verify'], ['HEADER', 'SUBJECT', 'confirm']]], async (err, results) => {
+        if (err) throw err
+
+        if (!results || results.length === 0) {
+          imap.end()
+          return { success: true, verified: 0, processed: 0, message: 'No pending verification emails' }
+        }
+
+        for (const id of results) {
+          try {
+            const f = imap.fetch(id, { bodies: '' })
+
+            f.on('message', (msg, seqno) => {
+              simpleParser(msg, async (err, parsed) => {
+                if (err) {
+                  console.error('Error parsing email:', err)
+                  return
+                }
+
+                processedCount++
+
+                try {
+                  // Extract verification link
+                  const verifyLink = parsed.text.match(/https?:\/\/[^\s]+verify[^\s]*/i) ||
+                    parsed.text.match(/https?:\/\/[^\s]+confirm[^\s]*/i)
+
+                  if (!verifyLink) {
+                    console.log('No verification link found in email')
+                    return
+                  }
+
+                  // Extract client name from email to/cc
+                  const recipientMatch = parsed.to?.text.match(/reboostcitations\+(\w+)@/i)
+                  const clientName = recipientMatch ? recipientMatch[1] : 'unknown'
+
+                  // Visit the verification link with Playwright
+                  const browser = await chromium.launch({ headless: true })
+                  const context = await browser.createBrowserContext()
+                  const page = await context.newPage()
+
+                  page.setDefaultTimeout(30000)
+
+                  try {
+                    await page.goto(verifyLink[0], { waitUntil: 'networkidle' })
+
+                    // Wait a bit for verification to process
+                    await new Promise(r => setTimeout(r, 2000))
+
+                    // Find citation in Firestore and mark verified
+                    const citationsSnap = await db
+                      .collection('citations')
+                      .where('directoryName', '==', parsed.from?.text)
+                      .limit(1)
+                      .get()
+
+                    if (!citationsSnap.empty) {
+                      await citationsSnap.docs[0].ref.update({
+                        verified: true,
+                        verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+                      })
+                      verifiedCount++
+                    }
+                  } catch (pageErr) {
+                    console.error('Error verifying link:', pageErr)
+                  } finally {
+                    await context.close()
+                    await browser.close()
+                  }
+                } catch (err) {
+                  console.error('Error processing email:', err)
+                }
+              })
+            })
+
+            f.on('error', (err) => {
+              console.error('Error fetching email:', err)
+            })
+          } catch (err) {
+            console.error('Error processing result:', err)
+          }
+        }
+
+        // Close IMAP connection
+        imap.end()
+      })
+    })
+
+    imap.openBox('INBOX', false, (err) => {
+      if (err) throw err
+    })
+
+    imap.on('ready', () => {
+      openInbox((err) => {
+        if (err) throw err
+      })
+    })
+
+    // Wait for process to complete
+    await new Promise((resolve, reject) => {
+      imap.on('end', () => {
+        resolve()
+      })
+      imap.on('error', reject)
+    })
+
+    return {
+      success: true,
+      verified: verifiedCount,
+      processed: processedCount,
+      message: `Verified ${verifiedCount} citations from ${processedCount} emails`,
+    }
+  } catch (err) {
+    console.error('Email verification error:', err)
+    throw new https.HttpsError('internal', `Email verification failed: ${err.message}`)
+  }
+})
+
 // ─── Create User with Optional Client ────────────────────────────────────────
 
 export const createUserWithClient = https.onCall(async (request) => {
