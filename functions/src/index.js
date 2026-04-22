@@ -26,6 +26,95 @@ async function logToJob(jobId, message, type = 'info') {
   })
 }
 
+// ─── Utility: Solve ReCAPTCHA with 2Captcha ────────────────────────────────
+
+async function solveCaptchaWith2Captcha(page, jobId, dirName) {
+  try {
+    // Get sitekey from reCAPTCHA iframe
+    const sitekey = await page.evaluate(() => {
+      const iframe = document.querySelector('iframe[src*="recaptcha"]')
+      if (!iframe) return null
+      const src = iframe.src
+      const match = src.match(/k=([^&]+)/)
+      return match ? match[1] : null
+    })
+
+    if (!sitekey) {
+      throw new Error('Could not extract reCAPTCHA sitekey')
+    }
+
+    await logToJob(jobId, `  → Solving ReCAPTCHA on ${dirName}...`, 'info')
+
+    // Submit to 2Captcha
+    const submitResponse = await axios.post('http://2captcha.com/api/upload', {
+      method: 'userrecaptcha',
+      googlekey: sitekey,
+      pageurl: page.url(),
+      key: CAPTCHA_KEY,
+    })
+
+    if (submitResponse.data.includes('ERROR')) {
+      throw new Error(`2Captcha error: ${submitResponse.data}`)
+    }
+
+    const captchaId = submitResponse.data.split('|')[1]
+
+    // Poll for result (max 3 minutes)
+    let token = null
+    let pollCount = 0
+    const maxPolls = 180 // 3 minutes with 1 second intervals
+
+    while (!token && pollCount < maxPolls) {
+      await new Promise(r => setTimeout(r, 1000))
+      pollCount++
+
+      const checkResponse = await axios.get(
+        `http://2captcha.com/api/res?key=${CAPTCHA_KEY}&captcha=${captchaId}&json=1`
+      )
+
+      const data = checkResponse.data
+      if (data.status === 1) {
+        token = data.request
+        break
+      }
+
+      if (data.status === 0 && pollCount % 10 === 0) {
+        // Log every 10 seconds
+        await logToJob(jobId, `  ⏳ Waiting for CAPTCHA solution...`, 'info')
+      }
+    }
+
+    if (!token) {
+      throw new Error('CAPTCHA solution timeout')
+    }
+
+    // Inject token into the page
+    await page.evaluate((captchaToken) => {
+      // Method 1: Inject into hidden g-recaptcha-response field
+      let element = document.getElementById('g-recaptcha-response')
+      if (element) {
+        element.innerHTML = captchaToken
+      }
+
+      // Method 2: Set in window.__grecaptcha__ object
+      if (window.__grecaptcha__) {
+        window.__grecaptcha__.reset()
+        window.__grecaptcha__.execute()
+      }
+
+      // Method 3: Dispatch change event
+      const event = new Event('change', { bubbles: true })
+      if (element) element.dispatchEvent(event)
+    }, token)
+
+    await logToJob(jobId, `  ✓ CAPTCHA solved`, 'success')
+    return true
+  } catch (err) {
+    await logToJob(jobId, `  ✗ Failed to solve CAPTCHA: ${err.message}`, 'error')
+    return false
+  }
+}
+
 // ─── Cloud Function: Start Submission Job ──────────────────────────────────
 
 export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (request) => {
@@ -136,19 +225,58 @@ export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (r
             if (submitBtn) {
               // Check for CAPTCHA
               const captchaFrame = await page.$('iframe[src*="recaptcha"], iframe[title*="reCAPTCHA"]')
-              if (captchaFrame && CAPTCHA_KEY) {
-                await logToJob(jobId, `  ⚠ CAPTCHA detected on ${dir.name} — flagging for manual review`, 'warn')
-                const citation = {
-                  clientId,
-                  directoryId: dir.id,
-                  directoryName: dir.name,
-                  status: 'needs_manual_review',
-                  reason: 'CAPTCHA required',
-                  dateSubmitted: admin.firestore.FieldValue.serverTimestamp(),
-                  liveUrl: null,
+              if (captchaFrame) {
+                if (!CAPTCHA_KEY) {
+                  await logToJob(jobId, `  ⚠ CAPTCHA detected on ${dir.name} — no solver configured`, 'warn')
+                  const citation = {
+                    clientId,
+                    directoryId: dir.id,
+                    directoryName: dir.name,
+                    status: 'needs_manual_review',
+                    reason: 'CAPTCHA required (no solver configured)',
+                    dateSubmitted: admin.firestore.FieldValue.serverTimestamp(),
+                    liveUrl: null,
+                  }
+                  await db.collection('citations').add(citation)
+                  failed++
+                } else {
+                  // Try to solve CAPTCHA with 2Captcha
+                  const solved = await solveCaptchaWith2Captcha(page, jobId, dir.name)
+
+                  if (solved) {
+                    // Small delay to let the CAPTCHA be recognized
+                    await new Promise(r => setTimeout(r, 2000))
+
+                    // Click submit
+                    await submitBtn.click()
+                    await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 10000 }).catch(() => {})
+
+                    const citation = {
+                      clientId,
+                      directoryId: dir.id,
+                      directoryName: dir.name,
+                      status: 'submitted',
+                      dateSubmitted: admin.firestore.FieldValue.serverTimestamp(),
+                      liveUrl: page.url(),
+                    }
+                    await db.collection('citations').add(citation)
+                    await logToJob(jobId, `  ✓ Submitted to ${dir.name} (CAPTCHA solved)`, 'success')
+                    submitted++
+                  } else {
+                    // CAPTCHA solving failed
+                    const citation = {
+                      clientId,
+                      directoryId: dir.id,
+                      directoryName: dir.name,
+                      status: 'needs_manual_review',
+                      reason: 'CAPTCHA solving failed',
+                      dateSubmitted: admin.firestore.FieldValue.serverTimestamp(),
+                      liveUrl: null,
+                    }
+                    await db.collection('citations').add(citation)
+                    failed++
+                  }
                 }
-                await db.collection('citations').add(citation)
-                failed++
               } else {
                 await submitBtn.click()
                 await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 10000 }).catch(() => {})
