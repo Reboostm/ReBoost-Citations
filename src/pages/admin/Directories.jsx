@@ -18,26 +18,28 @@ import { tierColor } from '@/utils/helpers'
 import toast from 'react-hot-toast'
 
 const schema = z.object({
-  name:          z.string().min(2, 'Required'),
-  url:           z.string().url('Must be a valid URL'),
-  submissionUrl: z.string().url('Must be a valid URL').or(z.literal('')),
-  category:      z.string().min(1, 'Required'),
-  da:            z.coerce.number().min(0).max(100),
-  type:          z.enum(['web_form', 'api', 'manual']),
-  tier:          z.enum(['high', 'medium', 'low']),
+  name:              z.string().min(2, 'Required'),
+  url:               z.string().url('Must be a valid URL'),
+  submissionUrl:     z.string().url('Must be a valid URL').or(z.literal('')),
+  category:          z.string().min(1, 'Required'),
+  da:                z.coerce.number().min(0).max(100),
+  type:              z.enum(['web_form', 'api', 'manual']),
+  tier:              z.enum(['high', 'medium', 'low']),
+  useCustomerEmail:  z.boolean().optional(),
 })
 
 function DirectoryForm({ directory, onSubmit, loading }) {
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
-      name:          directory?.name          ?? '',
-      url:           directory?.url           ?? '',
-      submissionUrl: directory?.submissionUrl ?? '',
-      category:      directory?.category      ?? 'General Business',
-      da:            directory?.da            ?? 30,
-      type:          directory?.type          ?? 'web_form',
-      tier:          directory?.tier          ?? 'medium',
+      name:              directory?.name              ?? '',
+      url:               directory?.url               ?? '',
+      submissionUrl:     directory?.submissionUrl     ?? '',
+      category:          directory?.category          ?? 'General Business',
+      da:                directory?.da                ?? 30,
+      type:              directory?.type              ?? 'web_form',
+      tier:              directory?.tier              ?? 'medium',
+      useCustomerEmail:  directory?.useCustomerEmail  ?? false,
     },
   })
 
@@ -51,6 +53,16 @@ function DirectoryForm({ directory, onSubmit, loading }) {
         <Input label="Domain Authority (DA)" type="number" min={0} max={100} error={errors.da?.message} {...register('da')} />
         <Select label="Submission Type *" options={[{value:'web_form',label:'Web Form'},{value:'api',label:'API'},{value:'manual',label:'Manual'}]} error={errors.type?.message} {...register('type')} />
         <Select label="Authority Tier *" options={[{value:'high',label:'High (DA 50+)'},{value:'medium',label:'Medium (DA 20–49)'},{value:'low',label:'Low (DA <20)'}]} error={errors.tier?.message} {...register('tier')} />
+        <div className="sm:col-span-2">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              {...register('useCustomerEmail')}
+              className="rounded border-gray-300 text-brand-600"
+            />
+            <span className="text-sm text-gray-700">Use customer's real email (for high-value sites like Yelp, BBB, Angi)</span>
+          </label>
+        </div>
       </div>
       <div className="flex justify-end pt-2">
         <Button type="submit" loading={loading}>{directory ? 'Save Changes' : 'Add Directory'}</Button>
@@ -230,6 +242,7 @@ export default function Directories() {
                   <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Category</th>
                   <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">DA</th>
                   <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Tier</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Email</th>
                   <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Type</th>
                   <th className="px-5 py-3 text-right text-xs font-medium text-gray-500">Actions</th>
                 </tr>
@@ -260,6 +273,11 @@ export default function Directories() {
                     </td>
                     <td className="px-5 py-3">
                       <Badge color={TIER_COLORS[dir.tier] ?? 'gray'}>{dir.tier}</Badge>
+                    </td>
+                    <td className="px-5 py-3">
+                      <Badge color={dir.useCustomerEmail ? 'blue' : 'gray'}>
+                        {dir.useCustomerEmail ? 'Real Email' : 'Dummy Email'}
+                      </Badge>
                     </td>
                     <td className="px-5 py-3 text-gray-500 capitalize">{dir.type?.replace('_', ' ')}</td>
                     <td className="px-5 py-3">

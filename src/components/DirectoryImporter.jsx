@@ -90,6 +90,7 @@ export default function DirectoryImporter({ onComplete }) {
     for (let i = 0; i < validRows.length; i++) {
       try {
         const row = validRows[i]
+        const useCustomerEmail = row.usecustomeremail?.toLowerCase() === 'true'
         await createDirectory({
           name: row.name,
           url: row.url,
@@ -98,6 +99,7 @@ export default function DirectoryImporter({ onComplete }) {
           da: parseInt(row.da),
           tier: row.tier.toLowerCase(),
           type: row.type.toLowerCase(),
+          useCustomerEmail,
         })
         imported++
       } catch (err) {
@@ -141,10 +143,12 @@ export default function DirectoryImporter({ onComplete }) {
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
         <p className="font-medium mb-2">CSV Format (required columns):</p>
         <code className="block bg-white p-2 rounded text-xs font-mono overflow-x-auto">
-          name,url,submissionUrl,category,da,tier,type
+          name,url,submissionUrl,category,da,tier,type,useCustomerEmail
         </code>
         <p className="mt-2 text-xs">
-          Example: Google My Business,https://myBusiness.google.com,https://myBusiness.google.com/create,General Business,100,high,web_form
+          <strong>useCustomerEmail:</strong> true for high-value sites (Yelp, BBB, Angi), false for standard sites (optional, defaults to false)
+          <br />
+          Example: Google My Business,https://myBusiness.google.com,https://myBusiness.google.com/create,General Business,100,high,web_form,true
         </p>
       </div>
 
