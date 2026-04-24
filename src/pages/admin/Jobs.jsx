@@ -144,7 +144,7 @@ function NewJobForm({ clients, packages, directoryCounts, allDirectories, submit
         {/* Low Authority */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm text-gray-700">Low Authority (DA <20)</label>
+            <label className="text-sm text-gray-700">Low Authority (DA &lt;20)</label>
             <span className="text-xs text-gray-500">{availableLow} available{submittedDirIds.size > 0 && ` (${directoryCounts.low - availableLow} already submitted)`}</span>
           </div>
           <div className="flex gap-3 items-center">
