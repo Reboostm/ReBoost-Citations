@@ -198,6 +198,11 @@ export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (r
             await logToJob(jobId, `→ Submitting to ${dir.name}...`, 'info')
             await page.goto(dir.submissionUrl, { waitUntil: 'networkidle' })
 
+            // Determine which email to use based on directory's useCustomerEmail flag
+            const emailForSubmission = dir.useCustomerEmail && client.publicEmail
+              ? client.publicEmail
+              : client.accountEmail
+
             // Fill common form fields
             const fieldMappings = [
               { sel: ['input[name*="business"], input[name*="company"], input[name*="name"]'], value: client.businessName },
@@ -206,7 +211,7 @@ export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (r
               { sel: ['input[name*="state"], input[name*="province"]'], value: client.state },
               { sel: ['input[name*="zip"], input[name*="postal"]'], value: client.zip },
               { sel: ['input[name*="phone"], input[name*="contact"], input[name*="tel"]'], value: client.phone },
-              { sel: ['input[name*="email"], input[name*="contact_email"]'], value: client.accountEmail },
+              { sel: ['input[name*="email"], input[name*="contact_email"]'], value: emailForSubmission },
               { sel: ['input[name*="website"], input[name*="url"]'], value: client.website },
             ]
 
@@ -234,6 +239,7 @@ export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (r
                     directoryName: dir.name,
                     status: 'needs_manual_review',
                     reason: 'CAPTCHA required (no solver configured)',
+                    emailUsed: emailForSubmission,
                     dateSubmitted: admin.firestore.FieldValue.serverTimestamp(),
                     liveUrl: null,
                   }
@@ -256,6 +262,7 @@ export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (r
                       directoryId: dir.id,
                       directoryName: dir.name,
                       status: 'submitted',
+                      emailUsed: emailForSubmission,
                       dateSubmitted: admin.firestore.FieldValue.serverTimestamp(),
                       liveUrl: page.url(),
                     }
@@ -270,6 +277,7 @@ export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (r
                       directoryName: dir.name,
                       status: 'needs_manual_review',
                       reason: 'CAPTCHA solving failed',
+                      emailUsed: emailForSubmission,
                       dateSubmitted: admin.firestore.FieldValue.serverTimestamp(),
                       liveUrl: null,
                     }
@@ -286,6 +294,7 @@ export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (r
                   directoryId: dir.id,
                   directoryName: dir.name,
                   status: 'submitted',
+                  emailUsed: emailForSubmission,
                   dateSubmitted: admin.firestore.FieldValue.serverTimestamp(),
                   liveUrl: page.url(),
                 }
@@ -305,6 +314,7 @@ export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (r
               directoryName: dir.name,
               status: 'failed',
               error: pageErr.message,
+              emailUsed: emailForSubmission,
               dateSubmitted: admin.firestore.FieldValue.serverTimestamp(),
             }
             await db.collection('citations').add(citation)
