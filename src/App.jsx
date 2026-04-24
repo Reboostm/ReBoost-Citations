@@ -22,11 +22,13 @@ import AdminReports from '@/pages/admin/Reports'
 import AdminAnalytics from '@/pages/admin/Analytics'
 import AdminCitationAudit from '@/pages/admin/CitationAudit'
 import AdminSettings from '@/pages/admin/Settings'
+import AdminSupportTickets from '@/pages/admin/SupportTickets'
 
 // Client pages
 import ClientDashboard from '@/pages/client/Dashboard'
 import ClientCitations from '@/pages/client/Citations'
 import ClientMyListings from '@/pages/client/MyListings'
+import ClientOnboarding from '@/pages/client/Onboarding'
 import PublicReport from '@/pages/PublicReport'
 
 function ProtectedRoute({ children, requireAdmin = false }) {
@@ -69,8 +71,19 @@ export default function App() {
             <Route path="reports" element={<AdminReports />} />
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="audit" element={<AdminCitationAudit />} />
+            <Route path="support" element={<AdminSupportTickets />} />
             <Route path="settings" element={<AdminSettings />} />
           </Route>
+
+          {/* Client Onboarding */}
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <ClientOnboarding />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Client Routes */}
           <Route

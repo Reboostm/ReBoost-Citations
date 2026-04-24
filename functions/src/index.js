@@ -759,3 +759,69 @@ export const createUserWithClient = https.onCall(async (request) => {
     throw new https.HttpsError('internal', err.message)
   }
 })
+
+// ─── GHL Webhook: Create account from payment ──────────────────────────────────
+
+export const ghlCreateAccount = https.onRequest(async (request, response) => {
+  // CORS headers
+  response.set('Access-Control-Allow-Origin', '*')
+  response.set('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  response.set('Access-Control-Allow-Headers', 'Content-Type')
+
+  if (request.method === 'OPTIONS') {
+    response.status(204).send('')
+    return
+  }
+
+  if (request.method !== 'POST') {
+    response.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+
+  try {
+    const { email, packageId, businessName } = request.body
+
+    if (!email || !packageId) {
+      response.status(400).json({ error: 'Missing required fields: email, packageId' })
+      return
+    }
+
+    // Create Firebase Auth user with default password
+    const defaultPassword = '123456'
+    const userRecord = await admin.auth().createUser({
+      email,
+      password: defaultPassword,
+      displayName: businessName || 'Customer',
+    })
+
+    // Create user document in Firestore
+    await db.collection('users').doc(userRecord.uid).set({
+      email,
+      role: 'client',
+      clientId: null,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
+
+    response.status(200).json({
+      success: true,
+      userId: userRecord.uid,
+      email,
+      message: 'Account created. User should log in with password 123456 and change it on first login.',
+    })
+  } catch (err) {
+    console.error('GHL webhook error:', err)
+
+    if (err.code === 'auth/email-already-exists') {
+      response.status(400).json({
+        error: 'Email already registered',
+        code: 'email-exists',
+      })
+      return
+    }
+
+    response.status(500).json({
+      error: err.message,
+    })
+  }
+})

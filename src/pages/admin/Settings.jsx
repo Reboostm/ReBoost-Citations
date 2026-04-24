@@ -13,6 +13,7 @@ const schema = z.object({
   captchaApiKey: z.string().min(1, 'Required'),
   gmailAddress: z.string().email('Invalid email'),
   gmailAppPassword: z.string().min(1, 'Required'),
+  supportEmails: z.string().min(1, 'Required'),
 })
 
 export default function Settings() {
@@ -29,6 +30,7 @@ export default function Settings() {
       captchaApiKey: '',
       gmailAddress: 'reboostcitations@gmail.com',
       gmailAppPassword: '',
+      supportEmails: '',
     },
   })
 
@@ -44,6 +46,7 @@ export default function Settings() {
             captchaApiKey: settings.captchaApiKey || '',
             gmailAddress: settings.gmailAddress || 'reboostcitations@gmail.com',
             gmailAppPassword: settings.gmailAppPassword || '',
+            supportEmails: settings.supportEmails || '',
           })
         }
       } catch (err) {
@@ -189,6 +192,31 @@ export default function Settings() {
                 <li>Enable IMAP in Gmail settings</li>
                 <li>Paste the 16-character password above</li>
               </ol>
+            </div>
+          </div>
+
+          {/* Support Emails Section */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-blue-600" />
+              Support Email Recipients
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Comma-separated list of email addresses that will receive support ticket notifications.
+            </p>
+
+            <div>
+              <Input
+                label="Support Emails *"
+                placeholder="admin@example.com, support@example.com, manager@example.com"
+                hint="Enter multiple emails separated by commas"
+                error={errors.supportEmails?.message}
+                {...register('supportEmails')}
+              />
+            </div>
+
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4 text-sm text-green-800">
+              <strong>Example:</strong> admin@example.com, support@example.com
             </div>
           </div>
 

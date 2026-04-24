@@ -226,6 +226,15 @@ export const getAdminUsers = () => getCollection('users', [where('role', '==', '
 export const createShareToken = (tokenId, data) => createDocument('shareTokens', data, tokenId)
 export const getShareToken = (tokenId) => getDocument('shareTokens', tokenId)
 
+// ─── Support Tickets ──────────────────────────────────────────────────────────
+
+export const createSupportTicket = (data) => createDocument('supportTickets', data)
+
+export const getSupportTickets = (constraints = []) =>
+  getCollection('supportTickets', [orderBy('createdAt', 'desc'), ...constraints])
+
+export const updateSupportTicket = (id, data) => updateDocument('supportTickets', id, data)
+
 // ─── Dashboard Stats ─────────────────────────────────────────────────────────
 
 export const getDashboardStats = async () => {

@@ -35,7 +35,10 @@
       "Bash(findstr :5173)",
       "Bash(dir \"C:\\\\Users\\\\justi\\\\Downloads\\\\Peep Free And Clean CITATIONS.xlsx\")",
       "Read(//c/Users/justi/Downloads/**)",
-      "Bash(python)"
+      "Bash(python)",
+      "Bash(grep -E \"\\\\.js$|\\\\.ts$\")",
+      "Bash(awk '{print $9, \"\\(\" $5 \"\\)\"}')",
+      "Bash(npm run *)"
     ]
   }
 }

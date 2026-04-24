@@ -1,0 +1,432 @@
+================================================================================
+                 REBOOST CITATIONS - SAAS ONBOARDING & SUPPORT
+                           ARCHITECTURE SUMMARY
+================================================================================
+
+PROJECT SCOPE:
+- 4 major components: Support Tickets, Email Config, Onboarding, Auto-Deploy
+- 5 new React components
+- 6 modified files
+- 1 new Cloud Function
+- Complete client → admin workflow
+
+================================================================================
+                              PART 1: SUPPORT TICKETS
+================================================================================
+
+WHAT IT DOES:
+- Clients submit support requests via modal button
+- Admins view, filter, and reply to tickets on dedicated page
+- Ticket status tracking (open/resolved)
+- Email notifications to configured admin addresses
+
+FILES INVOLVED:
+- NEW: /src/components/HelpButton.jsx (simple button)
+- NEW: /src/components/SupportTicketModal.jsx (form modal)
+- NEW: /src/components/SupportTicketDetailModal.jsx (admin detail view)
+- NEW: /src/pages/admin/SupportTickets.jsx (admin dashboard page)
+- MODIFY: /src/pages/client/Dashboard.jsx (add help button)
+- MODIFY: /src/services/firestore.js (add 4 ticket functions)
+
+DATA FLOW:
+Client Dashboard → Help Button → Support Ticket Modal → Firestore
+                                                            ↓
+Admin Support Tickets Page ← Firestore Query ← List View ← Detail Modal (read/reply)
+
+FIRESTORE STRUCTURE:
+Collection: supportTickets
+- clientId, clientName, clientEmail
+- subject, description, priority (low/medium/high)
+- status (open/resolved)
+- replies: [{adminEmail, message, timestamp}]
+- createdAt, resolvedAt, updatedAt
+
+KEY COMPONENTS:
+1. HelpButton - Icon button to open ticket form
+2. SupportTicketModal - Form with subject, description, priority
+3. SupportTicketDetailModal - View ticket, add replies, change status
+4. SupportTickets Admin Page - Table, search, filter, click to detail
+
+================================================================================
+                        PART 2: ADMIN EMAIL CONFIGURATION
+================================================================================
+
+WHAT IT DOES:
+- Store comma-separated list of email addresses in settings
+- Support tickets will be sent to these addresses (implementation note)
+- Centralized configuration for support notifications
+
+FILES INVOLVED:
+- MODIFY: /src/pages/admin/Settings.jsx (add input field)
+- MODIFY: /src/services/firestore.js (add 1 helper function)
+
+DATA STRUCTURE:
+Document: settings/global
+Field: supportTicketEmails = "email1@example.com, email2@example.com"
+
+IMPLEMENTATION:
+- Add zod validation schema field
+- Add Input component in Settings form
+- Add getSupportTicketEmails() service function
+- Parse and use in email sending (Cloud Function)
+
+================================================================================
+                           PART 3: ONBOARDING FORM
+================================================================================
+
+WHAT IT DOES:
+- First-time clients complete business profile
+- Collects: business info, location, description, social media, logo
+- Logo uploaded to Firebase Storage
+- Profile saved to client document
+- Auto-triggers citation job creation
+
+FILES INVOLVED:
+- NEW: /src/pages/client/Onboarding.jsx (5-section form page)
+- MODIFY: /src/pages/client/Dashboard.jsx (redirect if not complete)
+- MODIFY: /src/services/firestore.js (add updateClientProfile)
+- MODIFY: /src/App.jsx (add onboarding route)
+
+FORM SECTIONS:
+1. Basic Info: Business name, phone, 2 emails
+2. Business: Logo, category, website
+3. Location: Address, city, state, zip
+4. Description: Short + long descriptions
+5. Social: Facebook, Instagram, Twitter, LinkedIn, YouTube, TikTok
+
+DATA FLOW:
+First Login → Dashboard → Redirect to Onboarding (if !onboarding_complete)
+                              ↓
+                         5-Section Form
+                              ↓
+                        Validate All Fields
+                              ↓
+                         Upload Logo (Storage)
+                              ↓
+                    Save businessProfile to client
+                              ↓
+                    Create Onboarding Job (Cloud Function)
+                              ↓
+                    Redirect to Citations with "submitted" message
+
+FIRESTORE STRUCTURE:
+Document: clients/{clientId}
+New Fields:
+- businessProfile: {
+    businessName, phone, emailAccount, emailPublic,
+    logoUrl, category, website,
+    address, city, state, zip,
+    shortDescription, longDescription,
+    socialMedia: {facebook, instagram, twitter, linkedin, youtube, tiktok}
+  }
+- onboarding_complete: boolean
+
+================================================================================
+                        PART 4: AUTO-DEPLOY FROM FORM
+================================================================================
+
+WHAT IT DOES:
+- When client submits onboarding form, automatically creates citation job
+- Job queries top 300 directories matching client's package tier
+- Job starts running submissions immediately
+- Client sees real-time progress
+
+FILES INVOLVED:
+- NEW: Cloud Function createOnboardingJob in /functions/src/index.js
+- MODIFY: /src/services/functions.js (add callable reference)
+- MODIFY: /src/pages/client/Onboarding.jsx (call function on submit)
+
+CLOUD FUNCTION LOGIC:
+1. Authenticate user (via context.auth)
+2. Fetch client document (get packageId)
+3. Fetch package (get tier for directory matching)
+4. Query directories: tier=package.tier, limit=300, orderBy da desc
+5. Create job document with:
+   - status: pending
+   - progress: 0
+   - total: directory count
+   - directories: [{id, name, url}]
+   - logs: initial log entry
+6. Return {success, jobId, directoryCount}
+7. On error: send admin notification email
+
+INPUT/OUTPUT:
+Input: { clientId: string }
+Output: { success: boolean, jobId: string, directoryCount: number }
+Error: HttpsError with message
+
+JOB DOCUMENT STRUCTURE:
+- clientId, packageId
+- status (pending/running/completed/failed)
+- progress, total
+- directories: array
+- logs: array with timestamp, type, message
+- createdAt, updatedAt
+
+================================================================================
+                       PART 5: GHL WEBHOOK ENDPOINT (STUB)
+================================================================================
+
+WHAT IT DOES:
+- Receives new client signups from GoHighLevel CRM
+- Creates Firebase user with default password
+- Creates client document with packageId
+- Returns login URL
+
+ENDPOINT SPECIFICATION:
+Function: webhookCreateAccount
+Trigger: HTTPS POST (public)
+Path: https://us-central1-[project].cloudfunctions.net/webhookCreateAccount
+
+REQUEST:
+{
+  "email": "business@example.com",
+  "packageId": "pkg_1234567890",
+  "businessName": "Acme Corp",
+  "firstName": "John",
+  "lastName": "Doe"
+}
+
+RESPONSE:
+{
+  "success": true,
+  "userId": "uid_xxxxxxxxx",
+  "clientId": "client_xxxxxxxxx",
+  "loginUrl": "https://app.reboostcitations.com/login"
+}
+
+DATABASE OPERATIONS:
+1. Create Auth user: email + password "123456"
+2. Create Firestore user doc: {email, role: 'client', clientId}
+3. Create Firestore client doc: {businessName, packageId, onboarding_complete: false}
+4. Link user to client via clientId
+
+STATUS: Documented but NOT implemented yet
+
+================================================================================
+                              FILE SUMMARY
+================================================================================
+
+NEW FILES (5):
+1. /src/components/HelpButton.jsx
+   - Icon button to open support form
+   - Props: onClick handler
+
+2. /src/components/SupportTicketModal.jsx
+   - Form modal for submitting support tickets
+   - Props: open, onClose
+   - Fields: subject, description, priority
+
+3. /src/components/SupportTicketDetailModal.jsx
+   - Admin detail view of ticket
+   - Props: ticket, open, onClose, onUpdate
+   - Features: view replies, add reply, change status
+
+4. /src/pages/admin/SupportTickets.jsx
+   - Admin dashboard for support tickets
+   - Features: table, search, filter by status
+   - Table columns: Client, Subject, Priority, Status, Created
+
+5. /src/pages/client/Onboarding.jsx
+   - Client onboarding form (5 sections)
+   - Features: validation, logo upload, auto-job creation
+   - Sections: Basic, Business, Location, Description, Social
+
+MODIFIED FILES (6):
+1. /src/services/firestore.js
+   - Add getSupportTicketsByStatus(status)
+   - Add getSupportTicketsForClient(clientId)
+   - Add addTicketReply(ticketId, reply)
+   - Add markTicketAsResolved(ticketId)
+   - Add updateClientProfile(clientId, businessProfile)
+   - Add getSupportTicketEmails()
+
+2. /src/services/functions.js
+   - Add createOnboardingJob callable reference
+
+3. /src/pages/admin/Settings.jsx
+   - Add Input field: supportTicketEmails
+   - Update zod schema
+   - Update defaultValues
+   - Update form reset logic
+
+4. /src/pages/client/Dashboard.jsx
+   - Add HelpButton to header
+   - Add SupportTicketModal state
+   - Add onboarding redirect check
+   - Import components
+
+5. /src/App.jsx
+   - Import ClientOnboarding, AdminSupportTickets
+   - Add admin route: /admin/support-tickets
+   - Add client route: /dashboard/onboarding
+
+6. /src/components/layout/Sidebar.jsx
+   - Import HelpCircle icon
+   - Add adminNav item: Support Tickets
+
+CLOUD FUNCTIONS (1):
+1. /functions/src/index.js
+   - Add createOnboardingJob https.onCall function
+   - Logic: fetch client → fetch package → query directories → create job
+   - Error handling: email admin on failure
+
+================================================================================
+                           IMPLEMENTATION SEQUENCE
+================================================================================
+
+PHASE 1 - SERVICE LAYER (Foundation):
+1. Update firestore.js (add 6 functions)
+2. Update functions.js (add 1 callable)
+
+PHASE 2 - UI COMPONENTS (Presentational):
+3. Create HelpButton.jsx
+4. Create SupportTicketModal.jsx
+5. Create SupportTicketDetailModal.jsx
+
+PHASE 3 - ADMIN PAGES:
+6. Create admin/SupportTickets.jsx
+
+PHASE 4 - CLIENT PAGES:
+7. Create client/Onboarding.jsx
+
+PHASE 5 - INTEGRATION:
+8. Update admin/Settings.jsx
+9. Update client/Dashboard.jsx
+10. Update App.jsx
+11. Update Sidebar.jsx
+
+PHASE 6 - CLOUD FUNCTIONS:
+12. Update functions/src/index.js
+
+ESTIMATED TIME: 8-12 hours for experienced React developer
+
+================================================================================
+                              KEY DECISIONS
+================================================================================
+
+1. REPLIES AS ARRAY:
+   Why: Keeps all conversation in one document
+   Tradeoff: Firestore limit on document size (may need subcollection for huge tickets)
+
+2. LOGO IN STORAGE, NOT FIRESTORE:
+   Why: Separate concerns, avoid binary data in documents
+   Tradeoff: Extra upload step, requires storage rules
+
+3. ONBOARDING REQUIRED:
+   Why: Force complete profile before using service
+   Tradeoff: More friction, but cleaner data
+
+4. TOP 300 DIRECTORIES:
+   Why: Reasonable starting point, manageable job size
+   Tradeoff: Could expose client to more/fewer directories
+
+5. CLIENT-SIDE SEARCH:
+   Why: Simple, fast, no backend query
+   Tradeoff: Doesn't scale to 10k+ tickets (add pagination later)
+
+6. EMAIL RECIPIENTS IN SETTINGS:
+   Why: Centralized, not hardcoded
+   Tradeoff: Need to update settings to change recipients
+
+================================================================================
+                              TESTING CHECKLIST
+================================================================================
+
+SUPPORT TICKETS:
+- [ ] Help button appears on dashboard
+- [ ] Help button opens modal
+- [ ] Form validation works
+- [ ] Can submit ticket
+- [ ] Ticket appears in admin table
+- [ ] Can search by subject/client
+- [ ] Can filter by status
+- [ ] Can click ticket to open detail
+- [ ] Can add reply to open ticket
+- [ ] Can mark ticket resolved
+- [ ] Can reopen resolved ticket
+- [ ] Toast notifications work
+
+ONBOARDING:
+- [ ] First-time login redirects to onboarding
+- [ ] All 5 form sections display
+- [ ] Form validation works
+- [ ] Logo upload shows preview
+- [ ] Logo upload validates size
+- [ ] Can submit form
+- [ ] Logo uploads to Storage
+- [ ] Profile saved to Firestore
+- [ ] Job created in Firestore
+- [ ] Redirect to citations
+- [ ] Can't re-access onboarding (already complete)
+
+SETTINGS:
+- [ ] Email field displays
+- [ ] Can save comma-separated emails
+- [ ] Emails persist reload
+- [ ] Validation prevents empty field
+
+================================================================================
+                            DOCUMENTATION FILES
+================================================================================
+
+1. ARCHITECTURE.md
+   - Complete detailed specifications
+   - Data structures, functions, components
+   - 500+ lines, reference document
+
+2. COMPONENT_SPECS.md
+   - Detailed component specifications
+   - Props, state, structure, validation
+   - Code structure hints (not full code)
+
+3. IMPLEMENTATION_GUIDE.md
+   - Step-by-step code with full examples
+   - 700+ lines of actual code snippets
+   - Exact location for each change
+
+4. QUICK_REFERENCE.md
+   - Fast lookup: checklists, schemas, snippets
+   - Color codes, patterns, debugging tips
+   - One-page reference during coding
+
+5. This File (ARCHITECTURE_SUMMARY.txt)
+   - High-level overview
+   - Quick understanding of all 4 components
+   - Good for onboarding new developers
+
+================================================================================
+                            GETTING STARTED
+================================================================================
+
+For Implementation:
+1. Read QUICK_REFERENCE.md for file checklist
+2. Follow IMPLEMENTATION_GUIDE.md in order
+3. Refer to COMPONENT_SPECS.md for component details
+4. Check ARCHITECTURE.md for full specifications
+
+For Understanding System:
+1. Read this file first (5 min overview)
+2. Read ARCHITECTURE.md Part 1-5 (deeper understanding)
+3. Dive into COMPONENT_SPECS.md for implementation details
+
+For Debugging:
+1. Check QUICK_REFERENCE.md "Debugging Checklist"
+2. Review "Common Mistakes to Avoid"
+3. Verify Firestore schema matches expectations
+
+================================================================================
+                              NEXT STEPS
+================================================================================
+
+1. Review all 4 architecture documents
+2. Create file structure (new files)
+3. Implement in recommended sequence
+4. Test each phase before moving to next
+5. Deploy cloud function after testing
+6. Run full end-to-end test
+7. Monitor logs post-deployment
+
+Questions? All answers are in the architecture documents.
+
+================================================================================
