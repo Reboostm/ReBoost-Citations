@@ -87,20 +87,28 @@ function NewJobForm({ clients, packages, directoryCounts, allDirectories, submit
             <label className="text-sm text-gray-700">High Authority (DA 50+)</label>
             <span className="text-xs text-gray-500">{availableHigh} available{submittedDirIds.size > 0 && ` (${directoryCounts.high - availableHigh} already submitted)`}</span>
           </div>
-          <input
-            type="range"
-            min="0"
-            max={availableHigh || 0}
-            {...register('highCount')}
-            className="w-full"
-          />
-          <input
-            type="number"
-            min="0"
-            max={availableHigh || 0}
-            {...register('highCount')}
-            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-          />
+          <div className="flex gap-3 items-center">
+            <input
+              type="range"
+              min="0"
+              max={availableHigh || 0}
+              value={highCount}
+              onChange={(e) => {
+                const form = e.target.closest('form')
+                const input = form?.querySelector('input[name="highCount"][type="number"]')
+                if (input) input.value = e.target.value
+                register('highCount').onChange(e)
+              }}
+              className="flex-1"
+            />
+            <input
+              type="number"
+              min="0"
+              max={availableHigh || 0}
+              {...register('highCount', { valueAsNumber: true })}
+              className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
         </div>
 
         {/* Medium Authority */}
@@ -109,42 +117,58 @@ function NewJobForm({ clients, packages, directoryCounts, allDirectories, submit
             <label className="text-sm text-gray-700">Medium Authority (DA 20–49)</label>
             <span className="text-xs text-gray-500">{availableMedium} available{submittedDirIds.size > 0 && ` (${directoryCounts.medium - availableMedium} already submitted)`}</span>
           </div>
-          <input
-            type="range"
-            min="0"
-            max={availableMedium || 0}
-            {...register('mediumCount')}
-            className="w-full"
-          />
-          <input
-            type="number"
-            min="0"
-            max={availableMedium || 0}
-            {...register('mediumCount')}
-            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
-          />
+          <div className="flex gap-3 items-center">
+            <input
+              type="range"
+              min="0"
+              max={availableMedium || 0}
+              value={mediumCount}
+              onChange={(e) => {
+                const form = e.target.closest('form')
+                const input = form?.querySelector('input[name="mediumCount"][type="number"]')
+                if (input) input.value = e.target.value
+                register('mediumCount').onChange(e)
+              }}
+              className="flex-1"
+            />
+            <input
+              type="number"
+              min="0"
+              max={availableMedium || 0}
+              {...register('mediumCount', { valueAsNumber: true })}
+              className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
+            />
+          </div>
         </div>
 
         {/* Low Authority */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm text-gray-700">Low Authority (DA &lt;20)</label>
+            <label className="text-sm text-gray-700">Low Authority (DA <20)</label>
             <span className="text-xs text-gray-500">{availableLow} available{submittedDirIds.size > 0 && ` (${directoryCounts.low - availableLow} already submitted)`}</span>
           </div>
-          <input
-            type="range"
-            min="0"
-            max={availableLow || 0}
-            {...register('lowCount')}
-            className="w-full"
-          />
-          <input
-            type="number"
-            min="0"
-            max={availableLow || 0}
-            {...register('lowCount')}
-            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500"
-          />
+          <div className="flex gap-3 items-center">
+            <input
+              type="range"
+              min="0"
+              max={availableLow || 0}
+              value={lowCount}
+              onChange={(e) => {
+                const form = e.target.closest('form')
+                const input = form?.querySelector('input[name="lowCount"][type="number"]')
+                if (input) input.value = e.target.value
+                register('lowCount').onChange(e)
+              }}
+              className="flex-1"
+            />
+            <input
+              type="number"
+              min="0"
+              max={availableLow || 0}
+              {...register('lowCount', { valueAsNumber: true })}
+              className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500"
+            />
+          </div>
         </div>
 
         {/* Total summary */}
@@ -158,9 +182,6 @@ function NewJobForm({ clients, packages, directoryCounts, allDirectories, submit
         </div>
       </div>
 
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-        <strong>Note:</strong> The submission engine will run Playwright inside Firebase Cloud Functions. Processing happens asynchronously — monitor progress in the job logs below.
-      </div>
       <div className="flex justify-end">
         <Button type="submit" loading={loading}><Play className="w-4 h-4" /> Start Job</Button>
       </div>
