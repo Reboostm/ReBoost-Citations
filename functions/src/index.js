@@ -672,8 +672,8 @@ export const createUserWithClient = https.onCall(async (request) => {
     throw new https.HttpsError('invalid-argument', 'Email and password required')
   }
 
-  if (password.length < 8) {
-    throw new https.HttpsError('invalid-argument', 'Password must be at least 8 characters')
+  if (password.length < 6) {
+    throw new https.HttpsError('invalid-argument', 'Password must be at least 6 characters')
   }
 
   if (!['admin', 'client'].includes(role)) {

@@ -19,7 +19,7 @@ import toast from 'react-hot-toast'
 
 const createSchema = z.object({
   email:               z.string().email('Invalid email'),
-  password:            z.string().min(8, 'Password must be at least 8 characters').regex(/[A-Z]/, 'Must contain uppercase letter').regex(/[0-9]/, 'Must contain a number'),
+  password:            z.string().min(6, 'Password must be at least 6 characters'),
   role:                z.enum(['admin', 'client']),
   clientId:            z.string().optional(),
   sendPasswordReset:   z.boolean().optional(),
@@ -65,7 +65,7 @@ function UserForm({ user, clients, onSubmit, loading }) {
             label="Password *"
             type="password"
             placeholder="••••••••"
-            hint="At least 8 chars, one uppercase, one number"
+            hint="Minimum 6 characters (e.g., 123456)"
             error={errors.password?.message}
             {...register('password')}
           />
