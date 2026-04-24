@@ -202,6 +202,42 @@ export default function Reports() {
             </ResponsiveContainer>
           </Card>
 
+          {/* Existing / Live Citations */}
+          {citations.filter(c => c.status === 'live').length > 0 && (
+            <Card padding={false}>
+              <div className="px-5 py-4 border-b border-gray-100">
+                <CardTitle>Live Listings ({citations.filter(c => c.status === 'live').length})</CardTitle>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Directory</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Date Submitted</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Email Used</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Live URL</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {citations.filter(c => c.status === 'live').map(cit => (
+                      <tr key={cit.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium text-gray-900">{cit.directoryName}</td>
+                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(cit.dateSubmitted)}</td>
+                        <td className="px-4 py-3 text-xs text-gray-600 truncate max-w-[200px]">{cit.emailUsed ?? '—'}</td>
+                        <td className="px-4 py-3">
+                          {cit.liveUrl
+                            ? <a href={cit.liveUrl} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline text-xs">View</a>
+                            : <span className="text-gray-300">—</span>
+                          }
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+
           {/* Status Breakdown */}
           {statusData.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
