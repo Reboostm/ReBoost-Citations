@@ -38,7 +38,8 @@
       "Bash(python)",
       "Bash(grep -E \"\\\\.js$|\\\\.ts$\")",
       "Bash(awk '{print $9, \"\\(\" $5 \"\\)\"}')",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(firebase functions:log --limit 50)"
     ]
   }
 }

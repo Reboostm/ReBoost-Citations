@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CheckCircle, Clock, Globe, Package, TrendingUp, BarChart2 } from 'lucide-react'
+import { CheckCircle, Clock, Globe, Package, TrendingUp, BarChart2, ArrowRight, Zap } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { getClient, getCitationsForClient, getJobsForClient, getDocument } from '@/services/firestore'
+import Button from '@/components/ui/Button'
 import Card, { CardHeader, CardTitle } from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 import { PageLoader } from '@/components/ui/Spinner'
@@ -70,6 +71,27 @@ export default function ClientDashboard() {
         </div>
       </div>
 
+      {/* Start Here CTA - if onboarding incomplete */}
+      {!client?.businessProfile && (
+        <div className="mb-8 bg-gradient-to-r from-brand-50 to-blue-50 border border-brand-200 rounded-2xl p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <Zap className="w-5 h-5 text-brand-600" />
+                Let's Get Started!
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">Complete your business profile to begin submitting citations.</p>
+            </div>
+            <Link to="/onboarding">
+              <Button className="flex items-center gap-2 whitespace-nowrap">
+                Start Here
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
@@ -97,14 +119,16 @@ export default function ClientDashboard() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Active Package / Progress */}
-        <div className="space-y-4">
-          {pkg ? (
+      {/* Your Package Section */}
+      <div className="mb-8">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">📦 Your Package</h2>
+        {pkg ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Current Package */}
             <Card>
-              <div className="flex items-center gap-2 mb-4">
-                <Package className="w-5 h-5 text-brand-600" />
-                <CardTitle>Active Package</CardTitle>
+              <div className="flex items-center justify-between mb-4">
+                <CardTitle>Current Plan</CardTitle>
+                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Active</span>
               </div>
               <div className="bg-gradient-to-br from-brand-600 to-brand-700 rounded-xl p-4 text-white mb-4">
                 <p className="font-bold text-lg">{pkg.name}</p>
@@ -113,7 +137,7 @@ export default function ClientDashboard() {
               {activeJob && (
                 <>
                   <div className="flex justify-between text-sm text-gray-600 mb-1.5">
-                    <span>Progress</span>
+                    <span>Submission Progress</span>
                     <span>{activeJob.progress ?? 0} / {activeJob.total ?? 0}</span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-3 mb-1">
@@ -126,15 +150,36 @@ export default function ClientDashboard() {
                 </>
               )}
             </Card>
-          ) : (
+
+            {/* Upgrade Option */}
             <Card>
-              <div className="text-center py-4">
-                <Package className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">No active package</p>
-                <p className="text-xs text-gray-400 mt-1">Contact your account manager</p>
-              </div>
+              <CardTitle className="mb-4">Upgrade Available</CardTitle>
+              <p className="text-sm text-gray-600 mb-4">
+                Get more citations and expand your online presence.
+              </p>
+              <Button variant="secondary" className="w-full flex items-center justify-center gap-2">
+                <ArrowRight className="w-4 h-4" />
+                View Upgrade Options
+              </Button>
+              <p className="text-xs text-gray-400 mt-3 text-center">
+                Questions? <a href="#" onClick={() => {}} className="text-brand-600 hover:underline">Contact support</a>
+              </p>
             </Card>
-          )}
+          </div>
+        ) : (
+          <Card>
+            <div className="text-center py-8">
+              <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm font-medium text-gray-600">No Package Active</p>
+              <p className="text-xs text-gray-400 mt-1">Contact your account manager to get started</p>
+            </div>
+          </Card>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Business Info */}
+        <div className="space-y-4 lg:col-span-1">
 
           {/* Business Info */}
           <Card>

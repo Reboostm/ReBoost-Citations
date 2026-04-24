@@ -14,6 +14,8 @@ const schema = z.object({
   gmailAddress: z.string().email('Invalid email'),
   gmailAppPassword: z.string().min(1, 'Required'),
   supportEmails: z.string().min(1, 'Required'),
+  resendApiKey: z.string().optional(),
+  ghlWebhookBody: z.string().optional(),
 })
 
 export default function Settings() {
@@ -31,6 +33,8 @@ export default function Settings() {
       gmailAddress: 'reboostcitations@gmail.com',
       gmailAppPassword: '',
       supportEmails: '',
+      resendApiKey: '',
+      ghlWebhookBody: '',
     },
   })
 
@@ -47,6 +51,8 @@ export default function Settings() {
             gmailAddress: settings.gmailAddress || 'reboostcitations@gmail.com',
             gmailAppPassword: settings.gmailAppPassword || '',
             supportEmails: settings.supportEmails || '',
+            resendApiKey: settings.resendApiKey || '',
+            ghlWebhookBody: settings.ghlWebhookBody || '',
           })
         }
       } catch (err) {
@@ -217,6 +223,60 @@ export default function Settings() {
 
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4 text-sm text-green-800">
               <strong>Example:</strong> admin@example.com, support@example.com
+            </div>
+          </div>
+
+          {/* Resend Email Configuration */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-blue-600" />
+              Resend Email Service
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              For sending welcome emails to new customers and automated notifications.
+            </p>
+
+            <div>
+              <Input
+                label="Resend API Key"
+                type="password"
+                placeholder="re_xxxxx..."
+                hint="Get from https://resend.com/api-keys"
+                error={errors.resendApiKey?.message}
+                {...register('resendApiKey')}
+              />
+            </div>
+          </div>
+
+          {/* GHL Webhook Configuration */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-blue-600" />
+              GHL Webhook Configuration
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Configure how GHL data maps to your system when customers purchase via your sales funnel.
+            </p>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-2">Webhook Body Mapping</label>
+              <textarea
+                {...register('ghlWebhookBody')}
+                placeholder={'{\n  "email": "{{customer.email}}",\n  "packageId": "{{order.productId}}",\n  "businessName": "{{customer.companyName}}"\n}'}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+                rows={6}
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Copy this into your GHL workflow as the webhook body. Use GHL variable syntax: &#123;&#123;field.name&#125;&#125;
+              </p>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4 text-sm text-blue-800">
+              <strong>Webhook URL:</strong>
+              <br />
+              <code className="text-xs bg-blue-100 px-2 py-1 rounded mt-2 inline-block break-all">
+                https://us-central1-reboost-citations.cloudfunctions.net/ghlCreateAccount
+              </code>
             </div>
           </div>
 

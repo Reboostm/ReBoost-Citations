@@ -20,14 +20,14 @@ import toast from 'react-hot-toast'
 const createSchema = z.object({
   email:               z.string().email('Invalid email'),
   password:            z.string().min(6, 'Password must be at least 6 characters'),
-  role:                z.enum(['admin', 'client']),
+  role:                z.enum(['admin', 'staff', 'client']),
   clientId:            z.string().optional(),
   sendPasswordReset:   z.boolean().optional(),
 })
 
 const editSchema = z.object({
   email:    z.string().email('Invalid email'),
-  role:     z.enum(['admin', 'client']),
+  role:     z.enum(['admin', 'staff', 'client']),
   clientId: z.string().optional(),
 })
 
@@ -82,24 +82,39 @@ function UserForm({ user, clients, onSubmit, loading }) {
 
       <Select
         label="Role *"
-        options={[
-          { value: 'admin', label: 'Admin' },
-          { value: 'client', label: 'Client' },
-        ]}
+        placeholder="Select role"
         error={errors.role?.message}
         {...register('role')}
-      />
-      {role === 'client' && (
-        <Select
-          label="Linked Client"
-          placeholder="Select a client (optional)"
-          options={[
-            { value: '', label: 'None' },
-            ...clients.map(c => ({ value: c.id, label: c.businessName })),
-          ]}
-          error={errors.clientId?.message}
-          {...register('clientId')}
-        />
+      >
+        <option value="">-- Select a role --</option>
+        <option value="admin">🔐 Admin (Full Access) - You only</option>
+        <option value="staff">👥 Staff (Limited Access) - Your employees</option>
+        <option value="client">🏢 Client (Customer) - Business customers</option>
+      </Select>
+
+      {role === 'staff' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+          <strong>Staff Permissions:</strong>
+          <ul className="list-disc list-inside mt-2 space-y-1 text-xs">
+            <li>Can create and manage clients</li>
+            <li>Can view and respond to support tickets</li>
+            <li>Can see job status for their clients</li>
+            <li>Cannot delete clients or change settings</li>
+            <li>Cannot see other staff members or API keys</li>
+          </ul>
+        </div>
+      )}
+
+      {role === 'admin' && (
+        <div className="bg-brand-50 border border-brand-200 rounded-xl p-4 text-sm text-brand-800">
+          <strong>Admin Permissions:</strong>
+          <ul className="list-disc list-inside mt-2 space-y-1 text-xs">
+            <li>Full access to all features</li>
+            <li>Can manage staff, clients, and settings</li>
+            <li>Can delete and modify anything</li>
+            <li>Can view all analytics and reports</li>
+          </ul>
+        </div>
       )}
 
       <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-800">
