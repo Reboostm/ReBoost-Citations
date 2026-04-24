@@ -15,6 +15,8 @@ const schema = z.object({
   gmailAppPassword: z.string().min(1, 'Required'),
   supportEmails: z.string().min(1, 'Required'),
   resendApiKey: z.string().optional(),
+  resendSenderEmail: z.string().email('Invalid email').optional(),
+  stripeApiKey: z.string().optional(),
   ghlWebhookBody: z.string().optional(),
 })
 
@@ -34,6 +36,8 @@ export default function Settings() {
       gmailAppPassword: '',
       supportEmails: '',
       resendApiKey: '',
+      resendSenderEmail: '',
+      stripeApiKey: '',
       ghlWebhookBody: '',
     },
   })
@@ -52,6 +56,8 @@ export default function Settings() {
             gmailAppPassword: settings.gmailAppPassword || '',
             supportEmails: settings.supportEmails || '',
             resendApiKey: settings.resendApiKey || '',
+            resendSenderEmail: settings.resendSenderEmail || 'support@reboostcitations.com',
+            stripeApiKey: settings.stripeApiKey || '',
             ghlWebhookBody: settings.ghlWebhookBody || '',
           })
         }
@@ -236,7 +242,7 @@ export default function Settings() {
               For sending welcome emails to new customers and automated notifications.
             </p>
 
-            <div>
+            <div className="space-y-4">
               <Input
                 label="Resend API Key"
                 type="password"
@@ -245,6 +251,46 @@ export default function Settings() {
                 error={errors.resendApiKey?.message}
                 {...register('resendApiKey')}
               />
+              <Input
+                label="Sender Email Address"
+                type="email"
+                placeholder="support@yourcompany.com"
+                hint="Email address emails will come from"
+                error={errors.resendSenderEmail?.message}
+                {...register('resendSenderEmail')}
+              />
+            </div>
+          </div>
+
+          {/* Stripe Configuration */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-blue-600" />
+              Stripe Payment Processing
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              For processing upgrades and additional payments from your customers.
+            </p>
+
+            <div>
+              <Input
+                label="Stripe API Key"
+                type="password"
+                placeholder="sk_live_xxxxx..."
+                hint="Use your Secret Key from Stripe dashboard (not publishable key)"
+                error={errors.stripeApiKey?.message}
+                {...register('stripeApiKey')}
+              />
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4 text-sm text-blue-800">
+              <strong>How it works:</strong>
+              <ol className="list-decimal list-inside space-y-1 mt-2">
+                <li>Add Stripe Product IDs to your packages</li>
+                <li>Customers click "Upgrade" in their dashboard</li>
+                <li>Redirected to Stripe checkout</li>
+                <li>After payment, system auto-updates their package</li>
+              </ol>
             </div>
           </div>
 

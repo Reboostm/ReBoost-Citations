@@ -83,14 +83,14 @@ function UserForm({ user, clients, onSubmit, loading }) {
       <Select
         label="Role *"
         placeholder="Select role"
+        options={[
+          { value: 'admin', label: '🔐 Admin (Full Access) - You only' },
+          { value: 'staff', label: '👥 Staff (Limited Access) - Your employees' },
+          { value: 'client', label: '🏢 Client (Customer) - Business customers' },
+        ]}
         error={errors.role?.message}
         {...register('role')}
-      >
-        <option value="">-- Select a role --</option>
-        <option value="admin">🔐 Admin (Full Access) - You only</option>
-        <option value="staff">👥 Staff (Limited Access) - Your employees</option>
-        <option value="client">🏢 Client (Customer) - Business customers</option>
-      </Select>
+      />
 
       {role === 'staff' && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
