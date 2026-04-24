@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Users, UserCheck, Globe, Package, Briefcase,
-  BarChart2, Settings, LogOut, ChevronRight, Zap,
+  BarChart2, TrendingUp, Settings, LogOut, ChevronRight, Zap,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/utils/cn'
@@ -15,12 +15,14 @@ const adminNav = [
   { to: '/admin/packages',    label: 'Packages',     icon: Package },
   { to: '/admin/jobs',        label: 'Jobs',         icon: Briefcase },
   { to: '/admin/reports',     label: 'Reports',      icon: BarChart2 },
+  { to: '/admin/analytics',   label: 'Analytics',    icon: TrendingUp },
   { to: '/admin/settings',    label: 'Settings',     icon: Settings },
 ]
 
 const clientNav = [
   { to: '/dashboard',          label: 'Overview',    icon: LayoutDashboard, end: true },
   { to: '/dashboard/citations', label: 'Citations',  icon: Globe },
+  { to: '/dashboard/listings',  label: 'My Listings', icon: TrendingUp },
   { to: '/dashboard/reports',  label: 'Reports',    icon: BarChart2 },
 ]
 

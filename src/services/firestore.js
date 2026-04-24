@@ -105,6 +105,56 @@ export const getSubmittedDirectoriesForClient = async (clientId) => {
   return Array.from(submittedIds)
 }
 
+// Get analytics across all clients
+export const getGlobalAnalytics = async (days = 30) => {
+  const startDate = new Date()
+  startDate.setDate(startDate.getDate() - days)
+
+  const citations = await getAllCitations()
+  const filtered = citations.filter(c => {
+    const d = c.dateSubmitted?.toDate?.() ?? new Date(c.dateSubmitted)
+    return d >= startDate
+  })
+
+  const stats = {
+    total: filtered.length,
+    live: filtered.filter(c => c.status === 'live').length,
+    submitted: filtered.filter(c => c.status === 'submitted').length,
+    pending: filtered.filter(c => c.status === 'pending').length,
+    failed: filtered.filter(c => c.status === 'failed').length,
+    needsReview: filtered.filter(c => c.status === 'needs_manual_review').length,
+  }
+
+  // Calculate failure reasons
+  const failureReasons = {}
+  filtered.filter(c => c.status === 'failed').forEach(c => {
+    const reason = c.failureReason || 'Unknown'
+    failureReasons[reason] = (failureReasons[reason] ?? 0) + 1
+  })
+
+  // Find problematic directories (failing >50%)
+  const dirStats = {}
+  filtered.forEach(c => {
+    if (!dirStats[c.directoryId]) {
+      dirStats[c.directoryId] = { name: c.directoryName, total: 0, failed: 0 }
+    }
+    dirStats[c.directoryId].total++
+    if (c.status === 'failed') dirStats[c.directoryId].failed++
+  })
+
+  const problematicDirs = Object.values(dirStats)
+    .filter(d => d.total >= 3 && (d.failed / d.total) > 0.5)
+    .sort((a, b) => (b.failed / b.total) - (a.failed / a.total))
+
+  return {
+    ...stats,
+    successRate: stats.total > 0 ? Math.round((stats.live / stats.total) * 100) : 0,
+    failureRate: stats.total > 0 ? Math.round((stats.failed / stats.total) * 100) : 0,
+    failureReasons,
+    problematicDirectories: problematicDirs.slice(0, 10),
+  }
+}
+
 export const getAllCitations = (constraints = []) =>
   getCollection('citations', [orderBy('dateSubmitted', 'desc'), ...constraints])
 

@@ -19,12 +19,14 @@ import AdminDirectories from '@/pages/admin/Directories'
 import AdminPackages from '@/pages/admin/Packages'
 import AdminJobs from '@/pages/admin/Jobs'
 import AdminReports from '@/pages/admin/Reports'
+import AdminAnalytics from '@/pages/admin/Analytics'
 import AdminCitationAudit from '@/pages/admin/CitationAudit'
 import AdminSettings from '@/pages/admin/Settings'
 
 // Client pages
 import ClientDashboard from '@/pages/client/Dashboard'
 import ClientCitations from '@/pages/client/Citations'
+import ClientMyListings from '@/pages/client/MyListings'
 import PublicReport from '@/pages/PublicReport'
 
 function ProtectedRoute({ children, requireAdmin = false }) {
@@ -65,6 +67,7 @@ export default function App() {
             <Route path="packages" element={<AdminPackages />} />
             <Route path="jobs" element={<AdminJobs />} />
             <Route path="reports" element={<AdminReports />} />
+            <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="audit" element={<AdminCitationAudit />} />
             <Route path="settings" element={<AdminSettings />} />
           </Route>
@@ -80,6 +83,7 @@ export default function App() {
           >
             <Route path="" element={<ClientDashboard />} />
             <Route path="citations" element={<ClientCitations />} />
+            <Route path="listings" element={<ClientMyListings />} />
             <Route path="reports" element={<ClientDashboard />} />
           </Route>
 

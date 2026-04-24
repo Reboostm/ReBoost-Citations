@@ -26,6 +26,25 @@ async function logToJob(jobId, message, type = 'info') {
   })
 }
 
+// ─── Utility: Generate Master Password ──────────────────────────────────────
+
+function generateMasterPassword() {
+  const adjectives = [
+    'Bright', 'Swift', 'Strong', 'Clever', 'Smart', 'Quick',
+    'Bold', 'Vivid', 'Grand', 'Fresh', 'Dynamic', 'Stellar',
+  ]
+  const nouns = [
+    'Phoenix', 'Eagle', 'Rocket', 'Galaxy', 'Summit', 'Prime',
+    'Titan', 'Apex', 'Nova', 'Zenith', 'Force', 'Knight',
+  ]
+
+  const adj = adjectives[Math.floor(Math.random() * adjectives.length)]
+  const noun = nouns[Math.floor(Math.random() * nouns.length)]
+  const num = Math.floor(Math.random() * 99) + 1
+
+  return `${adj}${noun}@${num}`
+}
+
 // ─── Utility: Solve ReCAPTCHA with 2Captcha ────────────────────────────────
 
 async function solveCaptchaWith2Captcha(page, jobId, dirName) {
@@ -191,6 +210,16 @@ export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (r
             // Navigate to submission form
             if (!dir.submissionUrl) {
               await logToJob(jobId, `⊘ ${dir.name} — No submission URL`, 'warn')
+              const citation = {
+                clientId,
+                directoryId: dir.id,
+                directoryName: dir.name,
+                status: 'failed',
+                failureReason: 'NO_SUBMISSION_URL',
+                reason: 'No submission URL configured',
+                dateSubmitted: admin.firestore.FieldValue.serverTimestamp(),
+              }
+              await db.collection('citations').add(citation)
               failed++
               continue
             }
@@ -238,6 +267,7 @@ export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (r
                     directoryId: dir.id,
                     directoryName: dir.name,
                     status: 'needs_manual_review',
+                    failureReason: 'CAPTCHA_NOT_CONFIGURED',
                     reason: 'CAPTCHA required (no solver configured)',
                     emailUsed: emailForSubmission,
                     dateSubmitted: admin.firestore.FieldValue.serverTimestamp(),
@@ -275,7 +305,8 @@ export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (r
                       clientId,
                       directoryId: dir.id,
                       directoryName: dir.name,
-                      status: 'needs_manual_review',
+                      status: 'failed',
+                      failureReason: 'CAPTCHA_SOLVING_FAILED',
                       reason: 'CAPTCHA solving failed',
                       emailUsed: emailForSubmission,
                       dateSubmitted: admin.firestore.FieldValue.serverTimestamp(),
@@ -304,15 +335,35 @@ export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (r
               }
             } else {
               await logToJob(jobId, `  ⚠ Could not find submit button on ${dir.name}`, 'warn')
+              const citation = {
+                clientId,
+                directoryId: dir.id,
+                directoryName: dir.name,
+                status: 'failed',
+                failureReason: 'NO_SUBMIT_BUTTON',
+                reason: 'Could not find submit button',
+                emailUsed: emailForSubmission,
+                dateSubmitted: admin.firestore.FieldValue.serverTimestamp(),
+              }
+              await db.collection('citations').add(citation)
               failed++
             }
           } catch (pageErr) {
             await logToJob(jobId, `  ✗ Error submitting to ${dir.name}: ${pageErr.message}`, 'error')
+
+            // Categorize error
+            let failureReason = 'UNKNOWN_ERROR'
+            if (pageErr.message.includes('timeout')) failureReason = 'TIMEOUT'
+            else if (pageErr.message.includes('navigation')) failureReason = 'NAVIGATION_ERROR'
+            else if (pageErr.message.includes('network')) failureReason = 'NETWORK_ERROR'
+            else if (pageErr.message.includes('Invalid')) failureReason = 'VALIDATION_ERROR'
+
             const citation = {
               clientId,
               directoryId: dir.id,
               directoryName: dir.name,
               status: 'failed',
+              failureReason,
               error: pageErr.message,
               emailUsed: emailForSubmission,
               dateSubmitted: admin.firestore.FieldValue.serverTimestamp(),
@@ -661,11 +712,15 @@ export const createUserWithClient = https.onCall(async (request) => {
         counter++
       }
 
+      // Generate master password for this client
+      const masterPassword = generateMasterPassword()
+
       // Create client document
       const clientRef = await db.collection('clients').add({
         ...businessData,
         dummyEmail,
-        dummyEmailPassword: 'reboostcitations123!',
+        dummyEmailPassword: masterPassword,
+        masterPassword,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       })
