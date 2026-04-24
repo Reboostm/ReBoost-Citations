@@ -794,11 +794,24 @@ export const ghlCreateAccount = https.onRequest(async (request, response) => {
       displayName: businessName || 'Customer',
     })
 
-    // Create user document in Firestore
+    // Create client record
+    const clientRef = await db.collection('clients').add({
+      accountEmail: email,
+      publicEmail: email,
+      businessName: businessName || 'New Business',
+      packageId,
+      businessProfile: false, // Will be set to true after onboarding form
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
+
+    const clientId = clientRef.id
+
+    // Create user document in Firestore with link to client
     await db.collection('users').doc(userRecord.uid).set({
       email,
       role: 'client',
-      clientId: null,
+      clientId,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     })
@@ -806,7 +819,9 @@ export const ghlCreateAccount = https.onRequest(async (request, response) => {
     response.status(200).json({
       success: true,
       userId: userRecord.uid,
+      clientId,
       email,
+      packageId,
       message: 'Account created. User should log in with password 123456 and change it on first login.',
     })
   } catch (err) {
