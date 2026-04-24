@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Upload, X, Facebook, Instagram, Twitter, Linkedin, Globe } from 'lucide-react'
+import { Upload, X, Facebook, Instagram, Twitter, Linkedin, Globe, Play, Music } from 'lucide-react'
 import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
 import Select from '@/components/ui/Select'
@@ -31,6 +31,8 @@ const schema = z.object({
   twitter:        z.string().url().or(z.literal('')).optional(),
   linkedin:       z.string().url().or(z.literal('')).optional(),
   yelp:           z.string().url().or(z.literal('')).optional(),
+  youtube:        z.string().url().or(z.literal('')).optional(),
+  tiktok:         z.string().url().or(z.literal('')).optional(),
 })
 
 export default function ClientForm({ client, onSubmit, loading }) {
@@ -59,6 +61,8 @@ export default function ClientForm({ client, onSubmit, loading }) {
       twitter:       client?.socials?.twitter   ?? '',
       linkedin:      client?.socials?.linkedin  ?? '',
       yelp:          client?.socials?.yelp      ?? '',
+      youtube:       client?.socials?.youtube   ?? '',
+      tiktok:        client?.socials?.tiktok    ?? '',
     },
   })
 
@@ -96,11 +100,14 @@ export default function ClientForm({ client, onSubmit, loading }) {
         twitter:   data.twitter   || null,
         linkedin:  data.linkedin  || null,
         yelp:      data.yelp      || null,
+        youtube:   data.youtube   || null,
+        tiktok:    data.tiktok    || null,
       },
     }
     // remove flat social fields
     delete payload.facebook; delete payload.instagram
     delete payload.twitter;  delete payload.linkedin; delete payload.yelp
+    delete payload.youtube;  delete payload.tiktok
 
     onSubmit(payload, logoFile)
   }
@@ -205,13 +212,15 @@ export default function ClientForm({ client, onSubmit, loading }) {
 
       {/* Social Media */}
       <div>
-        <p className="text-sm font-medium text-gray-700 mb-3">Social Media Links</p>
+        <p className="text-sm font-medium text-gray-700 mb-3">Social Media & Video Links</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[
             { name: 'facebook',  label: 'Facebook',  placeholder: 'https://facebook.com/...' },
             { name: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/...' },
             { name: 'twitter',   label: 'X (Twitter)', placeholder: 'https://x.com/...' },
             { name: 'linkedin',  label: 'LinkedIn',  placeholder: 'https://linkedin.com/...' },
+            { name: 'youtube',   label: 'YouTube',   placeholder: 'https://youtube.com/...' },
+            { name: 'tiktok',    label: 'TikTok',    placeholder: 'https://tiktok.com/...' },
             { name: 'yelp',      label: 'Yelp',      placeholder: 'https://yelp.com/biz/...' },
           ].map(s => (
             <Input

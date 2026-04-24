@@ -26,7 +26,16 @@
       "Bash(curl -s -X POST 'https://firestore.googleapis.com/v1/projects/reboost-citations/databases/\\(default\\)/documents/users?documentId=GOMrqfDyfUNzYsx10siuns9ympg2&key=AIzaSyAt7E302aEZJSJh_Kzcheg22kOcAFBfPeY' -H 'Content-Type: application/json' -d '{ *)",
       "WebSearch",
       "WebFetch(domain:www.brightlocal.com)",
-      "WebFetch(domain:www.w3era.com)"
+      "WebFetch(domain:www.w3era.com)",
+      "WebFetch(domain:www.incrementors.com)",
+      "WebFetch(domain:loganix.com)",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__Claude_in_Chrome__get_page_text",
+      "Bash(netstat -ano)",
+      "Bash(findstr :5173)",
+      "Bash(dir \"C:\\\\Users\\\\justi\\\\Downloads\\\\Peep Free And Clean CITATIONS.xlsx\")",
+      "Read(//c/Users/justi/Downloads/**)",
+      "Bash(python)"
     ]
   }
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft, MapPin, Phone, Globe, Mail, Clock, Pencil,
-  Facebook, Instagram, Twitter, Linkedin, Star,
+  Facebook, Instagram, Twitter, Linkedin, Star, Play, Music,
   CheckCircle, XCircle, AlertCircle, Send, BarChart2,
 } from 'lucide-react'
 import { getClient, updateClient, getCitationsForClient, getJobsForClient } from '@/services/firestore'
@@ -143,12 +143,14 @@ export default function ClientDetail() {
             ))}
             {client.socials && Object.entries(client.socials).some(([,v]) => v) && (
               <div>
-                <dt className="text-xs text-gray-400 font-medium mb-1.5">Social Media</dt>
+                <dt className="text-xs text-gray-400 font-medium mb-1.5">Social Media & Video</dt>
                 <dd className="flex flex-wrap gap-2">
                   {client.socials.facebook  && <a href={client.socials.facebook}  target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">Facebook</a>}
                   {client.socials.instagram && <a href={client.socials.instagram} target="_blank" rel="noopener noreferrer" className="text-pink-600 hover:underline text-xs">Instagram</a>}
                   {client.socials.twitter   && <a href={client.socials.twitter}   target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline text-xs">X</a>}
                   {client.socials.linkedin  && <a href={client.socials.linkedin}  target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline text-xs">LinkedIn</a>}
+                  {client.socials.youtube   && <a href={client.socials.youtube}   target="_blank" rel="noopener noreferrer" className="text-red-600 hover:underline text-xs">YouTube</a>}
+                  {client.socials.tiktok    && <a href={client.socials.tiktok}    target="_blank" rel="noopener noreferrer" className="text-gray-900 hover:underline text-xs">TikTok</a>}
                   {client.socials.yelp      && <a href={client.socials.yelp}      target="_blank" rel="noopener noreferrer" className="text-red-600 hover:underline text-xs">Yelp</a>}
                 </dd>
               </div>
