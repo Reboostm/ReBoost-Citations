@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Plus, Play, Pause, RefreshCw, Terminal, ChevronDown, ChevronUp, Briefcase } from 'lucide-react'
-import { subscribeToJobs, getClients, getPackages, getDirectories, getCitationsForClient, createJob, updateJob } from '@/services/firestore'
+import { Plus, Play, Pause, RefreshCw, Terminal, ChevronDown, ChevronUp, Briefcase, AlertCircle } from 'lucide-react'
+import { subscribeToJobs, getClients, getPackages, getDirectories, getCitationsForClient, createJob, updateJob, getSubmittedDirectoriesForClient } from '@/services/firestore'
 import { startSubmissionJob, pauseSubmissionJob, resumeSubmissionJob } from '@/services/functions'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -24,7 +24,7 @@ const schema = z.object({
   lowCount:     z.coerce.number().min(0),
 })
 
-function NewJobForm({ clients, packages, directoryCounts, onSubmit, loading }) {
+function NewJobForm({ clients, packages, directoryCounts, allDirectories, submittedDirsByClient, onSubmit, loading }) {
   const { register, handleSubmit, formState: { errors }, watch } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -35,6 +35,16 @@ function NewJobForm({ clients, packages, directoryCounts, onSubmit, loading }) {
       lowCount: Math.floor((directoryCounts.low || 0) * 0.2),
     },
   })
+
+  const selectedClientId = watch('clientId')
+  const submittedDirs = selectedClientId ? (submittedDirsByClient[selectedClientId] || []) : []
+  const submittedDirIds = new Set(submittedDirs)
+
+  // Calculate available directories (excluding already submitted)
+  const availableDirs = allDirectories.filter(d => !submittedDirIds.has(d.id))
+  const availableHigh = availableDirs.filter(d => d.tier === 'high').length
+  const availableMedium = availableDirs.filter(d => d.tier === 'medium').length
+  const availableLow = availableDirs.filter(d => d.tier === 'low').length
 
   const highCount = watch('highCount')
   const mediumCount = watch('mediumCount')
@@ -61,23 +71,33 @@ function NewJobForm({ clients, packages, directoryCounts, onSubmit, loading }) {
       <div className="space-y-3">
         <label className="block text-sm font-medium text-gray-900">Directory Selection</label>
 
+        {selectedClientId && submittedDirs.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+            <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-blue-800">
+              <p className="font-medium mb-1">Already submitted for this client: {submittedDirs.length} directories</p>
+              <p className="text-xs">New selections will skip already-submitted sites</p>
+            </div>
+          </div>
+        )}
+
         {/* High Authority */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm text-gray-700">High Authority (DA 50+)</label>
-            <span className="text-xs text-gray-500">{directoryCounts.high || 0} available</span>
+            <span className="text-xs text-gray-500">{availableHigh} available{submittedDirIds.size > 0 && ` (${directoryCounts.high - availableHigh} already submitted)`}</span>
           </div>
           <input
             type="range"
             min="0"
-            max={directoryCounts.high || 0}
+            max={availableHigh || 0}
             {...register('highCount')}
             className="w-full"
           />
           <input
             type="number"
             min="0"
-            max={directoryCounts.high || 0}
+            max={availableHigh || 0}
             {...register('highCount')}
             className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           />
@@ -87,19 +107,19 @@ function NewJobForm({ clients, packages, directoryCounts, onSubmit, loading }) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm text-gray-700">Medium Authority (DA 20–49)</label>
-            <span className="text-xs text-gray-500">{directoryCounts.medium || 0} available</span>
+            <span className="text-xs text-gray-500">{availableMedium} available{submittedDirIds.size > 0 && ` (${directoryCounts.medium - availableMedium} already submitted)`}</span>
           </div>
           <input
             type="range"
             min="0"
-            max={directoryCounts.medium || 0}
+            max={availableMedium || 0}
             {...register('mediumCount')}
             className="w-full"
           />
           <input
             type="number"
             min="0"
-            max={directoryCounts.medium || 0}
+            max={availableMedium || 0}
             {...register('mediumCount')}
             className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
           />
@@ -109,19 +129,19 @@ function NewJobForm({ clients, packages, directoryCounts, onSubmit, loading }) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm text-gray-700">Low Authority (DA &lt;20)</label>
-            <span className="text-xs text-gray-500">{directoryCounts.low || 0} available</span>
+            <span className="text-xs text-gray-500">{availableLow} available{submittedDirIds.size > 0 && ` (${directoryCounts.low - availableLow} already submitted)`}</span>
           </div>
           <input
             type="range"
             min="0"
-            max={directoryCounts.low || 0}
+            max={availableLow || 0}
             {...register('lowCount')}
             className="w-full"
           />
           <input
             type="number"
             min="0"
-            max={directoryCounts.low || 0}
+            max={availableLow || 0}
             {...register('lowCount')}
             className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500"
           />
@@ -244,7 +264,9 @@ export default function Jobs() {
   const [jobs, setJobs]       = useState([])
   const [clients, setClients] = useState([])
   const [packages, setPackages] = useState([])
+  const [allDirectories, setAllDirectories] = useState([])
   const [directoryCounts, setDirectoryCounts] = useState({ high: 0, medium: 0, low: 0 })
+  const [submittedDirsByClient, setSubmittedDirsByClient] = useState({})
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
   const [starting, setStarting] = useState(false)
@@ -253,6 +275,7 @@ export default function Jobs() {
     Promise.all([getClients(), getPackages(), getDirectories()]).then(([c, p, dirs]) => {
       setClients(c)
       setPackages(p)
+      setAllDirectories(dirs)
 
       // Count directories by tier
       const counts = { high: 0, medium: 0, low: 0 }
@@ -262,6 +285,15 @@ export default function Jobs() {
         else if (dir.tier === 'low') counts.low++
       })
       setDirectoryCounts(counts)
+
+      // Load submitted directories for each client
+      Promise.all(c.map(client => getSubmittedDirectoriesForClient(client.id))).then(results => {
+        const submittedMap = {}
+        c.forEach((client, idx) => {
+          submittedMap[client.id] = results[idx]
+        })
+        setSubmittedDirsByClient(submittedMap)
+      })
     })
 
     const unsub = subscribeToJobs(data => {
@@ -278,8 +310,7 @@ export default function Jobs() {
       const pkg     = packages.find(p => p.id === data.packageId)
 
       // Get already-submitted directories for this client
-      const citations = await getCitationsForClient(data.clientId)
-      const submittedDirIds = new Set(citations.map(c => c.directoryId))
+      const submittedDirs = submittedDirsByClient[data.clientId] || []
 
       const jobId = await createJob({
         clientId:    data.clientId,
@@ -293,7 +324,7 @@ export default function Jobs() {
         progress:    0,
         total:       pkg?.citationCount ?? 0,
         logs:        [],
-        submittedDirIds: Array.from(submittedDirIds),
+        submittedDirIds: submittedDirs,
       })
 
       // Trigger the Cloud Function
@@ -305,7 +336,7 @@ export default function Jobs() {
           highCount: data.highCount,
           mediumCount: data.mediumCount,
           lowCount: data.lowCount,
-          submittedDirIds: Array.from(submittedDirIds),
+          submittedDirIds: submittedDirs,
         })
       } catch (fnErr) {
         // Function may not be deployed yet — job is still queued in Firestore
@@ -363,7 +394,7 @@ export default function Jobs() {
       )}
 
       <Modal open={showNew} onClose={() => setShowNew(false)} title="New Submission Job" size="lg">
-        <NewJobForm clients={clients} packages={packages} directoryCounts={directoryCounts} onSubmit={handleStart} loading={starting} />
+        <NewJobForm clients={clients} packages={packages} directoryCounts={directoryCounts} allDirectories={allDirectories} submittedDirsByClient={submittedDirsByClient} onSubmit={handleStart} loading={starting} />
       </Modal>
     </div>
   )

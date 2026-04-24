@@ -96,6 +96,15 @@ export const getCitationsForClient = (clientId) =>
     orderBy('dateSubmitted', 'desc'),
   ])
 
+export const getSubmittedDirectoriesForClient = async (clientId) => {
+  const citations = await getCitationsForClient(clientId)
+  const submittedIds = new Set()
+  citations.forEach(c => {
+    if (c.directoryId) submittedIds.add(c.directoryId)
+  })
+  return Array.from(submittedIds)
+}
+
 export const getAllCitations = (constraints = []) =>
   getCollection('citations', [orderBy('dateSubmitted', 'desc'), ...constraints])
 
