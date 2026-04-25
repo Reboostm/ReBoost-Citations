@@ -25,18 +25,19 @@ const schema = z.object({
 })
 
 function NewJobForm({ clients, packages, directoryCounts, allDirectories, submittedDirsByClient, onSubmit, loading }) {
-  const { register, handleSubmit, formState: { errors }, watch } = useForm({
+  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       clientId: '',
       packageId: '',
-      highCount: Math.floor((directoryCounts.high || 0) * 0.3),
-      mediumCount: Math.floor((directoryCounts.medium || 0) * 0.5),
-      lowCount: Math.floor((directoryCounts.low || 0) * 0.2),
+      highCount: 0,
+      mediumCount: 0,
+      lowCount: 0,
     },
   })
 
   const selectedClientId = watch('clientId')
+  const selectedPackageId = watch('packageId')
   const submittedDirs = selectedClientId ? (submittedDirsByClient[selectedClientId] || []) : []
   const submittedDirIds = new Set(submittedDirs)
 
@@ -45,6 +46,23 @@ function NewJobForm({ clients, packages, directoryCounts, allDirectories, submit
   const availableHigh = availableDirs.filter(d => d.tier === 'high').length
   const availableMedium = availableDirs.filter(d => d.tier === 'medium').length
   const availableLow = availableDirs.filter(d => d.tier === 'low').length
+
+  // Auto-calculate from selected package
+  useEffect(() => {
+    if (selectedPackageId) {
+      const pkg = packages.find(p => p.id === selectedPackageId)
+      if (pkg) {
+        const citationCount = pkg.citationCount || 0
+        const high = Math.min(Math.floor(citationCount * 0.2), availableHigh)
+        const medium = Math.min(Math.floor(citationCount * 0.4), availableMedium)
+        const low = Math.min(Math.floor(citationCount * 0.4), availableLow)
+
+        setValue('highCount', high)
+        setValue('mediumCount', medium)
+        setValue('lowCount', low)
+      }
+    }
+  }, [selectedPackageId, availableHigh, availableMedium, availableLow, packages, setValue])
 
   const highCount = watch('highCount')
   const mediumCount = watch('mediumCount')
@@ -81,93 +99,33 @@ function NewJobForm({ clients, packages, directoryCounts, allDirectories, submit
           </div>
         )}
 
-        {/* High Authority */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-sm text-gray-700">High Authority (DA 50+)</label>
-            <span className="text-xs text-gray-500">{availableHigh} available{submittedDirIds.size > 0 && ` (${directoryCounts.high - availableHigh} already submitted)`}</span>
+        {/* Auto-calculated distribution */}
+        <div className="space-y-2">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm text-gray-700">🟢 High Authority</label>
+              <span className="text-xs text-gray-500">{availableHigh} available</span>
+            </div>
+            <input type="hidden" {...register('highCount')} />
+            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-900">{highCount} directories</div>
           </div>
-          <div className="flex gap-3 items-center">
-            <input
-              type="range"
-              min="0"
-              max={availableHigh || 0}
-              value={highCount}
-              onChange={(e) => {
-                const form = e.target.closest('form')
-                const input = form?.querySelector('input[name="highCount"][type="number"]')
-                if (input) input.value = e.target.value
-                register('highCount').onChange(e)
-              }}
-              className="flex-1"
-            />
-            <input
-              type="number"
-              min="0"
-              max={availableHigh || 0}
-              {...register('highCount', { valueAsNumber: true })}
-              className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-        </div>
 
-        {/* Medium Authority */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-sm text-gray-700">Medium Authority (DA 20–49)</label>
-            <span className="text-xs text-gray-500">{availableMedium} available{submittedDirIds.size > 0 && ` (${directoryCounts.medium - availableMedium} already submitted)`}</span>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm text-gray-700">🟡 Medium Authority</label>
+              <span className="text-xs text-gray-500">{availableMedium} available</span>
+            </div>
+            <input type="hidden" {...register('mediumCount')} />
+            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-900">{mediumCount} directories</div>
           </div>
-          <div className="flex gap-3 items-center">
-            <input
-              type="range"
-              min="0"
-              max={availableMedium || 0}
-              value={mediumCount}
-              onChange={(e) => {
-                const form = e.target.closest('form')
-                const input = form?.querySelector('input[name="mediumCount"][type="number"]')
-                if (input) input.value = e.target.value
-                register('mediumCount').onChange(e)
-              }}
-              className="flex-1"
-            />
-            <input
-              type="number"
-              min="0"
-              max={availableMedium || 0}
-              {...register('mediumCount', { valueAsNumber: true })}
-              className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
-            />
-          </div>
-        </div>
 
-        {/* Low Authority */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-sm text-gray-700">Low Authority (DA &lt;20)</label>
-            <span className="text-xs text-gray-500">{availableLow} available{submittedDirIds.size > 0 && ` (${directoryCounts.low - availableLow} already submitted)`}</span>
-          </div>
-          <div className="flex gap-3 items-center">
-            <input
-              type="range"
-              min="0"
-              max={availableLow || 0}
-              value={lowCount}
-              onChange={(e) => {
-                const form = e.target.closest('form')
-                const input = form?.querySelector('input[name="lowCount"][type="number"]')
-                if (input) input.value = e.target.value
-                register('lowCount').onChange(e)
-              }}
-              className="flex-1"
-            />
-            <input
-              type="number"
-              min="0"
-              max={availableLow || 0}
-              {...register('lowCount', { valueAsNumber: true })}
-              className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-500"
-            />
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm text-gray-700">⚪ Low Authority</label>
+              <span className="text-xs text-gray-500">{availableLow} available</span>
+            </div>
+            <input type="hidden" {...register('lowCount')} />
+            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-900">{lowCount} directories</div>
           </div>
         </div>
 

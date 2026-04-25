@@ -196,33 +196,46 @@ export default function Packages() {
   const handleAdd = async (data) => {
     setSaving(true)
     try {
-      await createPackage(data)
+      console.log('Creating package with data:', data)
+      const result = await createPackage(data)
+      console.log('Package created with ID:', result)
       toast.success('Package created!')
       setShowAdd(false)
       load()
-    } catch (err) { toast.error(err.message) }
+    } catch (err) {
+      console.error('Package creation error:', err)
+      toast.error(err.message || 'Failed to create package')
+    }
     finally { setSaving(false) }
   }
 
   const handleEdit = async (data) => {
     setSaving(true)
     try {
+      console.log('Updating package:', editing.id, data)
       await updatePackage(editing.id, data)
       toast.success('Package updated!')
       setEditing(null)
       load()
-    } catch (err) { toast.error(err.message) }
+    } catch (err) {
+      console.error('Package update error:', err)
+      toast.error(err.message || 'Failed to update package')
+    }
     finally { setSaving(false) }
   }
 
   const handleDelete = async () => {
     setDeleting(true)
     try {
+      console.log('Deleting package:', deleteTarget.id)
       await deletePackage(deleteTarget.id)
       toast.success('Package deleted')
       setDeleteTarget(null)
       load()
-    } catch (err) { toast.error(err.message) }
+    } catch (err) {
+      console.error('Package delete error:', err)
+      toast.error(err.message || 'Failed to delete package')
+    }
     finally { setDeleting(false) }
   }
 
