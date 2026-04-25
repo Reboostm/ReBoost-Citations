@@ -667,17 +667,29 @@ export const verifyPendingEmails = https.onCall(async (request) => {
 export const createUserWithClient = https.onCall(async (request) => {
   const { email, password, role = 'client', businessData } = request.data
 
+  console.log('=== createUserWithClient called ===')
+  console.log('Email:', email)
+  console.log('Role:', role)
+  console.log('BusinessData:', businessData ? 'PROVIDED' : 'NOT PROVIDED')
+  console.log('Request auth:', request.auth ? 'AUTHENTICATED' : 'NOT AUTHENTICATED')
+
   // Validate inputs
   if (!email || !password) {
-    throw new https.HttpsError('invalid-argument', 'Email and password required')
+    const msg = 'Email and password required'
+    console.error(msg)
+    throw new https.HttpsError('invalid-argument', msg)
   }
 
   if (password.length < 6) {
-    throw new https.HttpsError('invalid-argument', 'Password must be at least 6 characters')
+    const msg = 'Password must be at least 6 characters'
+    console.error(msg)
+    throw new https.HttpsError('invalid-argument', msg)
   }
 
-  if (!['admin', 'client'].includes(role)) {
-    throw new https.HttpsError('invalid-argument', 'Role must be admin or client')
+  if (!['admin', 'staff', 'client'].includes(role)) {
+    const msg = 'Role must be admin, staff, or client'
+    console.error(msg)
+    throw new https.HttpsError('invalid-argument', msg)
   }
 
   // Validate businessData if provided
@@ -685,22 +697,27 @@ export const createUserWithClient = https.onCall(async (request) => {
     const required = ['businessName', 'phone', 'accountEmail', 'website', 'category', 'address', 'city', 'state', 'zip']
     const missing = required.filter(field => !businessData[field])
     if (missing.length > 0) {
-      throw new https.HttpsError('invalid-argument', `Missing required fields: ${missing.join(', ')}`)
+      const msg = `Missing required fields: ${missing.join(', ')}`
+      console.error(msg)
+      throw new https.HttpsError('invalid-argument', msg)
     }
   }
 
   try {
+    console.log('Step 1: Creating Firebase Auth user...')
     // 1. Create Firebase Auth user
     const userRecord = await admin.auth().createUser({
       email,
       password,
     })
+    console.log('✓ Auth user created:', userRecord.uid)
 
     let clientId = null
 
     // 2. If businessData provided, create client and generate dummy email
     if (businessData && role === 'client') {
       try {
+        console.log('Step 2: Creating client document...')
         // Generate dummy email: reboostcitations+companyname@gmail.com
         const baseName = businessData.businessName
           .toLowerCase()
@@ -722,6 +739,8 @@ export const createUserWithClient = https.onCall(async (request) => {
           counter++
         }
 
+        console.log('Generated dummy email:', dummyEmail)
+
         // Generate master password for this client
         const masterPassword = generateMasterPassword()
 
@@ -736,14 +755,16 @@ export const createUserWithClient = https.onCall(async (request) => {
         })
 
         clientId = clientRef.id
+        console.log('✓ Client created:', clientId)
       } catch (clientErr) {
         // Log error and rethrow with context
-        console.error('Client creation error:', clientErr)
+        console.error('❌ Client creation error:', clientErr.message, clientErr.code)
         throw new Error(`Failed to create client: ${clientErr.message}`)
       }
     }
 
     // 3. Create Firestore user document
+    console.log('Step 3: Creating Firestore user document...')
     await db.collection('users').doc(userRecord.uid).set({
       email,
       role,
@@ -751,16 +772,22 @@ export const createUserWithClient = https.onCall(async (request) => {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     })
+    console.log('✓ User document created')
 
-    return {
+    const result = {
       success: true,
       userId: userRecord.uid,
       clientId: clientId,
       email,
       dummyEmail: clientId ? (businessData ? `reboostcitations+${businessData.businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}@gmail.com` : null) : null,
     }
+
+    console.log('✅ SUCCESS:', result)
+    return result
   } catch (err) {
-    console.error('createUserWithClient error:', err)
+    console.error('❌ FATAL ERROR:', err.message)
+    console.error('Error code:', err.code)
+    console.error('Full error:', err)
 
     // Handle specific Firebase Auth errors
     if (err.code === 'auth/email-already-exists') {
@@ -774,7 +801,9 @@ export const createUserWithClient = https.onCall(async (request) => {
     }
 
     // Return the actual error message instead of generic "internal"
-    throw new https.HttpsError('internal', err.message || 'An error occurred creating user')
+    const errorMsg = err.message || 'Unknown error'
+    console.error('Throwing error to client:', errorMsg)
+    throw new https.HttpsError('internal', errorMsg)
   }
 })
 

@@ -92,28 +92,31 @@ export default function Clients() {
   const handleQuickCreate = async (data) => {
     setSaving(true)
     try {
+      console.log('Quick client create - data:', data)
+
       // Create minimal client document
       const id = await createClient({
         businessName: data.businessName,
         accountEmail: data.accountEmail,
-        createdAt: new Date(),
       })
+
+      console.log('Client created with ID:', id)
 
       // Generate temporary password
       const tempPassword = Math.random().toString(36).slice(-12)
 
-      // Send welcome email with credentials (you'd implement this as a Cloud Function)
-      // For now, just show the credentials to admin
+      // Show credentials to admin to share with client
       toast.success(
-        `Client created! Share these credentials:\n\nEmail: ${data.accountEmail}\nPassword: ${tempPassword}`,
-        { duration: 10000 }
+        `✓ Client created!\n\nShare these login credentials:\nEmail: ${data.accountEmail}\nPassword: ${tempPassword}`,
+        { duration: 15000 }
       )
 
       setAddMode(null)
       load()
     } catch (err) {
-      console.error('Quick create error:', err)
-      toast.error(err.message || 'Failed to create client')
+      console.error('Quick client create error:', err)
+      console.error('Error message:', err.message)
+      toast.error(`Failed to create client: ${err.message || 'Unknown error'}`)
     } finally {
       setSaving(false)
     }

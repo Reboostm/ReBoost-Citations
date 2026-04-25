@@ -172,6 +172,8 @@ export default function Users() {
   const handleAdd = async (data) => {
     setSaving(true)
     try {
+      console.log('Creating user:', { email: data.email, role: data.role })
+
       // Call Cloud Function to create Firebase Auth user + Firestore user
       const createUserWithClient = httpsCallable(functions, 'createUserWithClient')
 
@@ -182,9 +184,12 @@ export default function Users() {
         businessData: null, // Admin creation doesn't create client
       })
 
+      console.log('User creation response:', response)
+
       // Send password reset email if requested
       if (data.sendPasswordReset) {
         try {
+          console.log('Sending password reset email...')
           await fetch('https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=' +
             import.meta.env.VITE_FIREBASE_API_KEY, {
             method: 'POST',
@@ -195,7 +200,8 @@ export default function Users() {
             }),
           })
           toast.success(`User created! Password reset email sent to ${data.email}`)
-        } catch {
+        } catch (emailErr) {
+          console.error('Password reset email error:', emailErr)
           toast.success(`User created! (Password reset email could not be sent)`)
         }
       } else {
@@ -205,9 +211,14 @@ export default function Users() {
       setShowAdd(false)
       load()
     } catch (err) {
-      let errorMsg = err.message
+      console.error('User creation error:', err)
+      console.error('Error message:', err.message)
+      console.error('Error code:', err.code)
+
+      let errorMsg = err.message || 'Failed to create user'
       if (err.message?.includes('Email already')) errorMsg = 'Email already in use'
-      toast.error(errorMsg)
+
+      toast.error(`Error: ${errorMsg}`)
     } finally {
       setSaving(false)
     }
