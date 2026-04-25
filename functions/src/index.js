@@ -680,6 +680,15 @@ export const createUserWithClient = https.onCall(async (request) => {
     throw new https.HttpsError('invalid-argument', 'Role must be admin or client')
   }
 
+  // Validate businessData if provided
+  if (businessData && role === 'client') {
+    const required = ['businessName', 'phone', 'accountEmail', 'website', 'category', 'address', 'city', 'state', 'zip']
+    const missing = required.filter(field => !businessData[field])
+    if (missing.length > 0) {
+      throw new https.HttpsError('invalid-argument', `Missing required fields: ${missing.join(', ')}`)
+    }
+  }
+
   try {
     // 1. Create Firebase Auth user
     const userRecord = await admin.auth().createUser({
@@ -691,41 +700,47 @@ export const createUserWithClient = https.onCall(async (request) => {
 
     // 2. If businessData provided, create client and generate dummy email
     if (businessData && role === 'client') {
-      // Generate dummy email: reboostcitations+companyname@gmail.com
-      const baseName = businessData.businessName
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '')
-      let dummyEmail = `reboostcitations+${baseName}@gmail.com`
-      let counter = 1
+      try {
+        // Generate dummy email: reboostcitations+companyname@gmail.com
+        const baseName = businessData.businessName
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '')
+        let dummyEmail = `reboostcitations+${baseName}@gmail.com`
+        let counter = 1
 
-      // Check if dummy email exists and increment if needed
-      while (true) {
-        const existing = await db
-          .collection('clients')
-          .where('dummyEmail', '==', dummyEmail)
-          .limit(1)
-          .get()
+        // Check if dummy email exists and increment if needed
+        while (true) {
+          const existing = await db
+            .collection('clients')
+            .where('dummyEmail', '==', dummyEmail)
+            .limit(1)
+            .get()
 
-        if (existing.empty) break
+          if (existing.empty) break
 
-        dummyEmail = `reboostcitations+${baseName}${counter}@gmail.com`
-        counter++
+          dummyEmail = `reboostcitations+${baseName}${counter}@gmail.com`
+          counter++
+        }
+
+        // Generate master password for this client
+        const masterPassword = generateMasterPassword()
+
+        // Create client document
+        const clientRef = await db.collection('clients').add({
+          ...businessData,
+          dummyEmail,
+          dummyEmailPassword: masterPassword,
+          masterPassword,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        })
+
+        clientId = clientRef.id
+      } catch (clientErr) {
+        // Log error and rethrow with context
+        console.error('Client creation error:', clientErr)
+        throw new Error(`Failed to create client: ${clientErr.message}`)
       }
-
-      // Generate master password for this client
-      const masterPassword = generateMasterPassword()
-
-      // Create client document
-      const clientRef = await db.collection('clients').add({
-        ...businessData,
-        dummyEmail,
-        dummyEmailPassword: masterPassword,
-        masterPassword,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      })
-
-      clientId = clientRef.id
     }
 
     // 3. Create Firestore user document
@@ -745,6 +760,8 @@ export const createUserWithClient = https.onCall(async (request) => {
       dummyEmail: clientId ? (businessData ? `reboostcitations+${businessData.businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}@gmail.com` : null) : null,
     }
   } catch (err) {
+    console.error('createUserWithClient error:', err)
+
     // Handle specific Firebase Auth errors
     if (err.code === 'auth/email-already-exists') {
       throw new https.HttpsError('already-exists', 'Email already in use')
@@ -756,7 +773,8 @@ export const createUserWithClient = https.onCall(async (request) => {
       throw new https.HttpsError('invalid-argument', 'Password is too weak')
     }
 
-    throw new https.HttpsError('internal', err.message)
+    // Return the actual error message instead of generic "internal"
+    throw new https.HttpsError('internal', err.message || 'An error occurred creating user')
   }
 })
 

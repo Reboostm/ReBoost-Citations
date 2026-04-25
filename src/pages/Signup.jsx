@@ -24,14 +24,15 @@ const step1Schema = z.object({
 
 const step2Schema = z.object({
   businessName: z.string().min(2, 'Business name required'),
-  phone: z.string().regex(/^\+?1?\d{9,}$/, 'Invalid phone number'),
+  phone: z.string().min(1, 'Phone required').transform(p => p.replace(/\D/g, '')).refine(p => p.length >= 10, 'Phone must be at least 10 digits'),
   accountEmail: z.string().email('Invalid email address'),
   website: z.string().min(1, 'Website required').transform(url => {
     // Auto-add https:// if not present
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      return `https://${url}`
+    const trimmed = url.trim()
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      return `https://${trimmed}`
     }
-    return url
+    return trimmed
   }).refine(url => {
     try {
       new URL(url)
@@ -146,12 +147,17 @@ export default function Signup() {
       toast.success('Account created successfully!')
       navigate('/dashboard')
     } catch (err) {
-      let errorMsg = err.message
-      if (err.code === 'auth/email-already-exists' || err.message.includes('Email already')) {
-        errorMsg = 'Email already in use'
-      } else if (err.message.includes('auth/weak-password')) {
-        errorMsg = 'Password is too weak'
+      console.error('Signup error:', err)
+      let errorMsg = err.message || 'Failed to create account'
+
+      // Try to extract meaningful error from Firebase error details
+      if (err.details) {
+        errorMsg = err.details
+      } else if (err.code === 'functions/internal') {
+        // Cloud Function threw an internal error
+        errorMsg = err.message || 'An error occurred. Please check your information and try again.'
       }
+
       toast.error(errorMsg)
     } finally {
       setLoading(false)
@@ -243,7 +249,8 @@ export default function Signup() {
                 <Input
                   label="Phone number *"
                   type="tel"
-                  placeholder="(555) 123-4567"
+                  placeholder="5551234567"
+                  hint="10+ digits (spaces, dashes, parentheses accepted)"
                   error={step2Form.formState.errors.phone?.message}
                   {...step2Form.register('phone')}
                 />
