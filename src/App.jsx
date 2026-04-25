@@ -28,6 +28,7 @@ import AdminSupportTickets from '@/pages/admin/SupportTickets'
 import ClientDashboard from '@/pages/client/Dashboard'
 import ClientCitations from '@/pages/client/Citations'
 import ClientMyListings from '@/pages/client/MyListings'
+import ClientBilling from '@/pages/client/Billing'
 import ClientOnboarding from '@/pages/client/Onboarding'
 import PublicReport from '@/pages/PublicReport'
 
@@ -97,6 +98,7 @@ export default function App() {
             <Route path="" element={<ClientDashboard />} />
             <Route path="citations" element={<ClientCitations />} />
             <Route path="listings" element={<ClientMyListings />} />
+            <Route path="billing" element={<ClientBilling />} />
             <Route path="reports" element={<ClientDashboard />} />
           </Route>
 

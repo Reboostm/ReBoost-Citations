@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CheckCircle, Clock, Globe, Package, TrendingUp, BarChart2, ArrowRight, Zap } from 'lucide-react'
+import { CheckCircle, Clock, Globe, Package, TrendingUp, BarChart2, ArrowRight, Zap, ExternalLink } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { getClient, getCitationsForClient, getJobsForClient, getDocument } from '@/services/firestore'
+import { getClient, getCitationsForClient, getJobsForClient, getDocument, getPackages } from '@/services/firestore'
 import Button from '@/components/ui/Button'
 import Card, { CardHeader, CardTitle } from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
@@ -16,6 +16,7 @@ export default function ClientDashboard() {
   const [citations, setCitations] = useState([])
   const [jobs, setJobs]         = useState([])
   const [pkg, setPkg]           = useState(null)
+  const [tools, setTools]       = useState([])
   const [loading, setLoading]   = useState(true)
 
   useEffect(() => {
@@ -25,7 +26,8 @@ export default function ClientDashboard() {
       getClient(cid),
       getCitationsForClient(cid),
       getJobsForClient(cid),
-    ]).then(async ([c, cit, j]) => {
+      getPackages(),
+    ]).then(async ([c, cit, j, packages]) => {
       setClient(c)
       setCitations(cit)
       setJobs(j)
@@ -35,6 +37,11 @@ export default function ClientDashboard() {
         const p = await getDocument('packages', j[0].packageId)
         setPkg(p)
       }
+
+      // Filter for cross-sell tools (packageType='tool')
+      const toolPackages = packages.filter(p => p.packageType === 'tool')
+      setTools(toolPackages)
+
       setLoading(false)
     })
   }, [userProfile])
@@ -157,10 +164,12 @@ export default function ClientDashboard() {
               <p className="text-sm text-gray-600 mb-4">
                 Get more citations and expand your online presence.
               </p>
-              <Button variant="secondary" className="w-full flex items-center justify-center gap-2">
-                <ArrowRight className="w-4 h-4" />
-                View Upgrade Options
-              </Button>
+              <Link to="/dashboard/billing">
+                <Button variant="secondary" className="w-full flex items-center justify-center gap-2">
+                  <ArrowRight className="w-4 h-4" />
+                  View Upgrade Options
+                </Button>
+              </Link>
               <p className="text-xs text-gray-400 mt-3 text-center">
                 Questions? <a href="#" onClick={() => {}} className="text-brand-600 hover:underline">Contact support</a>
               </p>
@@ -176,6 +185,46 @@ export default function ClientDashboard() {
           </Card>
         )}
       </div>
+
+      {/* Cross-Sell Tools */}
+      {tools.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">🛠️ Recommended Tools</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {tools.map(tool => (
+              <Card key={tool.id} className="hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-3">
+                  <span className="text-3xl">{tool.toolIcon || '🛠️'}</span>
+                  {tool.highlighted && (
+                    <Badge color="purple">Recommended</Badge>
+                  )}
+                </div>
+                <CardTitle className="mb-2">{tool.name}</CardTitle>
+                {tool.description && (
+                  <p className="text-sm text-gray-600 mb-4">{tool.description}</p>
+                )}
+                <a
+                  href={tool.toolLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    if (!tool.toolLink) e.preventDefault()
+                  }}
+                >
+                  <Button
+                    variant="secondary"
+                    className="w-full flex items-center justify-center gap-2"
+                    disabled={!tool.toolLink}
+                  >
+                    {tool.toolCtaText || 'Learn More'}
+                    <ExternalLink className="w-4 h-4" />
+                  </Button>
+                </a>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Business Info */}

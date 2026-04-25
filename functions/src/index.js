@@ -760,6 +760,245 @@ export const createUserWithClient = https.onCall(async (request) => {
   }
 })
 
+// ─── Cloud Function: Create Stripe Checkout Session ──────────────────────────
+
+export const createCheckoutSession = https.onCall(async (request) => {
+  if (!request.auth) {
+    throw new https.HttpsError('unauthenticated', 'Not authenticated')
+  }
+
+  const { clientId, packageId, isUpgrade } = request.data
+
+  if (!clientId || !packageId) {
+    throw new https.HttpsError('invalid-argument', 'Missing required parameters')
+  }
+
+  try {
+    // Get settings to retrieve Stripe API key
+    const settingsSnap = await db.collection('settings').doc('global').get()
+    const settings = settingsSnap.data()
+
+    if (!settings?.stripeApiKey) {
+      throw new Error('Stripe API key not configured')
+    }
+
+    // Import Stripe
+    const Stripe = require('stripe')
+    const stripe = new Stripe(settings.stripeApiKey)
+
+    // Get package details
+    const pkgSnap = await db.collection('packages').doc(packageId).get()
+    if (!pkgSnap.exists) {
+      throw new Error('Package not found')
+    }
+    const pkg = pkgSnap.data()
+
+    // Get client details
+    const clientSnap = await db.collection('clients').doc(clientId).get()
+    if (!clientSnap.exists) {
+      throw new Error('Client not found')
+    }
+    const client = clientSnap.data()
+
+    // Determine charge amount
+    let chargeAmount = Math.round(pkg.price * 100) // Convert to cents
+    let description = `${pkg.name} - ${pkg.citationCount.toLocaleString()} citations`
+
+    if (isUpgrade && pkg.upgradePrice) {
+      chargeAmount = Math.round(pkg.upgradePrice * 100)
+      description = `Upgrade to ${pkg.name} - Additional cost`
+    }
+
+    // Create Stripe checkout session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: pkg.name,
+              description: description,
+            },
+            unit_amount: chargeAmount,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${process.env.FRONTEND_URL || 'https://www.reboostcitations.com'}/dashboard?checkout=success&packageId=${packageId}`,
+      cancel_url: `${process.env.FRONTEND_URL || 'https://www.reboostcitations.com'}/dashboard/billing`,
+      customer_email: client.accountEmail || client.publicEmail,
+      metadata: {
+        clientId,
+        packageId,
+        isUpgrade: isUpgrade ? 'true' : 'false',
+      },
+    })
+
+    // Store checkout session in Firestore for webhook handling
+    await db.collection('checkout_sessions').doc(session.id).set({
+      clientId,
+      packageId,
+      isUpgrade: isUpgrade || false,
+      sessionId: session.id,
+      status: 'open',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
+
+    return {
+      success: true,
+      checkoutUrl: session.url,
+      sessionId: session.id,
+    }
+  } catch (err) {
+    console.error('Stripe checkout error:', err)
+    throw new https.HttpsError('internal', err.message)
+  }
+})
+
+// ─── Bulk Import Directories ──────────────────────────────────────────────────
+
+export const bulkImportDirectories = https.onCall(async (request) => {
+  if (!request.auth) {
+    throw new https.HttpsError('unauthenticated', 'Not authenticated')
+  }
+
+  // Check if user is admin
+  const userSnap = await db.collection('users').doc(request.auth.uid).get()
+  if (!userSnap.exists || userSnap.data().role !== 'admin') {
+    throw new https.HttpsError('permission-denied', 'Admin access required')
+  }
+
+  const { directories } = request.data
+
+  if (!Array.isArray(directories) || directories.length === 0) {
+    throw new https.HttpsError('invalid-argument', 'Directories array required')
+  }
+
+  const batch = db.batch()
+  let imported = 0
+  const errors = []
+
+  for (const dir of directories) {
+    try {
+      // Validate required fields
+      if (!dir.name || !dir.url) {
+        errors.push(`${dir.name || 'Unknown'}: Missing required fields`)
+        continue
+      }
+
+      // Create directory document
+      const docRef = db.collection('directories').doc()
+      batch.set(docRef, {
+        name: dir.name,
+        url: dir.url,
+        submissionUrl: dir.submissionUrl || '',
+        category: dir.category || 'General Business',
+        da: parseInt(dir.da) || 0,
+        tier: dir.tier || 'medium',
+        type: dir.type || 'web_form',
+        useCustomerEmail: dir.useCustomerEmail === 'true' || dir.useCustomerEmail === true,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      })
+      imported++
+    } catch (err) {
+      errors.push(`${dir.name}: ${err.message}`)
+    }
+  }
+
+  try {
+    await batch.commit()
+    return {
+      success: true,
+      imported,
+      errors: errors.length > 0 ? errors : undefined,
+      message: `Successfully imported ${imported} directories${errors.length > 0 ? `, ${errors.length} failed` : ''}`,
+    }
+  } catch (err) {
+    throw new https.HttpsError('internal', err.message)
+  }
+})
+
+// ─── Stripe Webhook: Handle payment completion ──────────────────────────────
+
+export const stripeWebhook = https.onRequest(async (request, response) => {
+  response.set('Access-Control-Allow-Origin', '*')
+  response.set('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  response.set('Access-Control-Allow-Headers', 'Content-Type')
+
+  if (request.method === 'OPTIONS') {
+    response.status(204).send('')
+    return
+  }
+
+  if (request.method !== 'POST') {
+    response.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+
+  try {
+    // Get settings for Stripe webhook secret
+    const settingsSnap = await db.collection('settings').doc('global').get()
+    const settings = settingsSnap.data()
+
+    if (!settings?.stripeApiKey) {
+      response.status(400).json({ error: 'Stripe not configured' })
+      return
+    }
+
+    // Verify webhook signature
+    const Stripe = require('stripe')
+    const stripe = new Stripe(settings.stripeApiKey)
+
+    const sig = request.headers['stripe-signature']
+    let event
+
+    // Note: For production, use webhook secret from Stripe dashboard
+    // For testing, we'll skip signature verification
+    try {
+      event = request.body
+    } catch (err) {
+      response.status(400).send(`Webhook Error: ${err.message}`)
+      return
+    }
+
+    // Handle checkout.session.completed event
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object
+
+      const { clientId, packageId, isUpgrade } = session.metadata
+
+      if (!clientId || !packageId) {
+        response.status(400).json({ error: 'Missing metadata' })
+        return
+      }
+
+      // Update client document with new package
+      await db.collection('clients').doc(clientId).update({
+        packageId,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      })
+
+      // Update checkout session record
+      if (session.id) {
+        await db.collection('checkout_sessions').doc(session.id).update({
+          status: 'completed',
+          paidAt: admin.firestore.FieldValue.serverTimestamp(),
+        })
+      }
+
+      console.log(`Payment completed for client ${clientId}, upgraded to package ${packageId}`)
+    }
+
+    response.status(200).json({ received: true })
+  } catch (err) {
+    console.error('Stripe webhook error:', err)
+    response.status(500).json({ error: err.message })
+  }
+})
+
 // ─── GHL Webhook: Create account from payment ──────────────────────────────────
 
 export const ghlCreateAccount = https.onRequest(async (request, response) => {

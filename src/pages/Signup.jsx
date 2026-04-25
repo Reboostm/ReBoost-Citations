@@ -15,7 +15,7 @@ import { functions } from '@/services/firebase'
 // Validation schemas for each step
 const step1Schema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters').regex(/[A-Z]/, 'Must contain uppercase letter').regex(/[0-9]/, 'Must contain a number'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   passwordConfirm: z.string(),
 }).refine(data => data.password === data.passwordConfirm, {
   message: 'Passwords do not match',
@@ -26,7 +26,20 @@ const step2Schema = z.object({
   businessName: z.string().min(2, 'Business name required'),
   phone: z.string().regex(/^\+?1?\d{9,}$/, 'Invalid phone number'),
   accountEmail: z.string().email('Invalid email address'),
-  website: z.string().url('Invalid URL'),
+  website: z.string().min(1, 'Website required').transform(url => {
+    // Auto-add https:// if not present
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return `https://${url}`
+    }
+    return url
+  }).refine(url => {
+    try {
+      new URL(url)
+      return true
+    } catch {
+      return false
+    }
+  }, 'Invalid URL'),
   category: z.string().min(1, 'Category required'),
 })
 
@@ -38,12 +51,24 @@ const step3Schema = z.object({
 })
 
 const CATEGORIES = [
-  'General Business','Legal & Law','Medical & Health','Dental','Home Services',
-  'Plumbing','HVAC','Electrical','Roofing','Landscaping','Cleaning Services',
-  'Restaurant & Food','Automotive','Real Estate','Financial Services','Insurance',
-  'Education','Beauty & Salon','Fitness & Gym','Pet Services','Retail',
-  'Technology','Marketing','Construction','Photography','Event Planning',
-  'Travel & Tourism','Non-Profit','Other',
+  'General Business','Legal & Law','Medical & Health','Dental',
+  // Home Services - Detailed
+  'Plumbing','HVAC','Electrical','Roofing','Landscaping','General Contracting',
+  'Pressure Washing','Window Cleaning','House Cleaning','Carpet Cleaning','Maid Service',
+  'Handyman Services','Home Repair','Painting','Flooring','Kitchen & Bath Remodeling',
+  // Food & Hospitality
+  'Restaurant & Food','Bar & Lounge','Coffee Shop','Bakery','Catering',
+  // Services
+  'Automotive','Auto Repair','Car Detailing','Real Estate','Financial Services','Insurance',
+  // Personal Services
+  'Beauty & Salon','Hair Salon','Barbershop','Fitness & Gym','Personal Training',
+  'Pet Services','Veterinary','Dog Grooming','Dog Training',
+  // Retail & Commerce
+  'Retail','E-Commerce','Grocery Store','Pharmacy',
+  // Professional Services
+  'Technology','IT Services','Web Design','Marketing','Consulting','Accounting',
+  // Other
+  'Construction','Photography','Event Planning','Travel & Tourism','Education','Non-Profit','Other',
 ]
 
 export default function Signup() {
@@ -181,7 +206,7 @@ export default function Signup() {
                   label="Password"
                   type="password"
                   placeholder="••••••••"
-                  hint="At least 8 chars, one uppercase, one number"
+                  hint="At least 6 characters (e.g., 123456)"
                   error={step1Form.formState.errors.password?.message}
                   {...step1Form.register('password')}
                 />
@@ -233,7 +258,8 @@ export default function Signup() {
                 <Input
                   label="Website *"
                   type="url"
-                  placeholder="https://yourwebsite.com"
+                  placeholder="marketingreboost.com"
+                  hint="Enter with or without https:// (we'll add it automatically)"
                   error={step2Form.formState.errors.website?.message}
                   {...step2Form.register('website')}
                 />

@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Users, UserCheck, Globe, Package, Briefcase,
   BarChart2, TrendingUp, Settings, LogOut, ChevronRight, Zap, MessageSquare,
+  CreditCard,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/utils/cn'
@@ -24,6 +25,7 @@ const clientNav = [
   { to: '/dashboard',          label: 'Overview',    icon: LayoutDashboard, end: true },
   { to: '/dashboard/citations', label: 'Citations',  icon: Globe },
   { to: '/dashboard/listings',  label: 'My Listings', icon: TrendingUp },
+  { to: '/dashboard/billing',  label: 'Billing',    icon: CreditCard },
   { to: '/dashboard/reports',  label: 'Reports',    icon: BarChart2 },
 ]
 
