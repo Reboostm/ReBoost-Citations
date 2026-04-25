@@ -28,7 +28,6 @@ const schema = z.object({
   upgradePrice:          z.coerce.number().min(0, 'Must be 0 or more').optional(),
   packageType:           z.enum(['citation', 'tool']).default('citation'),
   toolLink:              z.string().url('Must be a valid URL').optional(),
-  toolIcon:              z.string().max(2, 'Emoji or icon').optional(),
   toolCtaText:           z.string().max(20, 'Keep it short').optional(),
 })
 
@@ -47,7 +46,6 @@ function PackageForm({ pkg, packages = [], onSubmit, loading }) {
       upgradePrice:          pkg?.upgradePrice          ?? 0,
       packageType:           pkg?.packageType           ?? 'citation',
       toolLink:              pkg?.toolLink              ?? '',
-      toolIcon:              pkg?.toolIcon              ?? '🛠️',
       toolCtaText:           pkg?.toolCtaText           ?? 'Learn More',
     },
   })
@@ -88,10 +86,7 @@ function PackageForm({ pkg, packages = [], onSubmit, loading }) {
         <div className="space-y-4 border-t pt-4">
           <h4 className="text-sm font-semibold text-gray-900">Tool Configuration</h4>
           <Input label="Product Link" type="url" placeholder="https://..." error={errors.toolLink?.message} {...register('toolLink')} />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Icon (emoji)" placeholder="🛠️" maxLength={2} error={errors.toolIcon?.message} {...register('toolIcon')} />
-            <Input label="CTA Button Text" placeholder="Learn More, Get It Now, etc" error={errors.toolCtaText?.message} {...register('toolCtaText')} />
-          </div>
+          <Input label="CTA Button Text" placeholder="Learn More, Get It Now, etc" error={errors.toolCtaText?.message} {...register('toolCtaText')} />
         </div>
       )}
       <Textarea label="Description" placeholder="Brief description of what's included" {...register('description')} />
@@ -115,8 +110,8 @@ function PackageForm({ pkg, packages = [], onSubmit, loading }) {
             </h4>
             <Input
               label="Stripe Product ID"
-              placeholder="price_xxxxx"
-              hint="From your Stripe dashboard (Dashboard > Products)"
+              placeholder="price_1234567890"
+              hint="Get from Stripe dashboard or use any ID for testing (e.g., price_test_123)"
               error={errors.stripeProductId?.message}
               {...register('stripeProductId')}
             />

@@ -147,15 +147,25 @@ export default function Signup() {
       toast.success('Account created successfully!')
       navigate('/dashboard')
     } catch (err) {
-      console.error('Signup error:', err)
-      let errorMsg = err.message || 'Failed to create account'
+      console.error('Signup error full:', err)
+      console.error('Signup error message:', err.message)
+      console.error('Signup error code:', err.code)
 
-      // Try to extract meaningful error from Firebase error details
+      let errorMsg = 'Failed to create account'
+
+      // Extract the actual error message
+      if (err.message) {
+        errorMsg = err.message
+      }
+
+      // Firebase functions errors wrap the message
       if (err.details) {
         errorMsg = err.details
-      } else if (err.code === 'functions/internal') {
-        // Cloud Function threw an internal error
-        errorMsg = err.message || 'An error occurred. Please check your information and try again.'
+      }
+
+      // If it's still a generic error, provide more context
+      if (errorMsg.includes('INTERNAL') || errorMsg.includes('internal')) {
+        errorMsg = 'Server error - check console for details'
       }
 
       toast.error(errorMsg)
@@ -264,7 +274,7 @@ export default function Signup() {
                 />
                 <Input
                   label="Website *"
-                  type="url"
+                  type="text"
                   placeholder="marketingreboost.com"
                   hint="Enter with or without https:// (we'll add it automatically)"
                   error={step2Form.formState.errors.website?.message}
