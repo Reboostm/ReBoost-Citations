@@ -94,20 +94,26 @@ export default function Clients() {
     try {
       console.log('Quick client create - data:', data)
 
-      // Create minimal client document
-      const id = await createClient({
-        businessName: data.businessName,
-        accountEmail: data.accountEmail,
+      // Generate a temporary password for the client login
+      const tempPassword = Math.random().toString(36).slice(-8) + 'A1!'
+
+      // Create Firebase Auth user + client doc atomically via Cloud Function
+      const createUserWithClientFn = httpsCallable(functions, 'createUserWithClient')
+      const response = await createUserWithClientFn({
+        email: data.accountEmail,
+        password: tempPassword,
+        role: 'client',
+        minimal: true,
+        businessData: {
+          businessName: data.businessName,
+          accountEmail: data.accountEmail,
+        },
       })
 
-      console.log('Client created with ID:', id)
+      console.log('Quick client creation response:', response)
 
-      // Generate temporary password
-      const tempPassword = Math.random().toString(36).slice(-12)
-
-      // Show credentials to admin to share with client
       toast.success(
-        `✓ Client created!\n\nShare these login credentials:\nEmail: ${data.accountEmail}\nPassword: ${tempPassword}`,
+        `✓ Client created!\n\nLogin credentials to share:\nEmail: ${data.accountEmail}\nPassword: ${tempPassword}`,
         { duration: 15000 }
       )
 
@@ -115,8 +121,9 @@ export default function Clients() {
       load()
     } catch (err) {
       console.error('Quick client create error:', err)
-      console.error('Error message:', err.message)
-      toast.error(`Failed to create client: ${err.message || 'Unknown error'}`)
+      let msg = err.message || 'Unknown error'
+      if (msg.includes('already-exists') || msg.includes('already in use')) msg = 'Email already in use'
+      toast.error(`Failed to create client: ${msg}`)
     } finally {
       setSaving(false)
     }

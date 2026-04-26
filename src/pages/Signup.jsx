@@ -151,23 +151,8 @@ export default function Signup() {
       console.error('Signup error message:', err.message)
       console.error('Signup error code:', err.code)
 
-      let errorMsg = 'Failed to create account'
-
-      // Extract the actual error message
-      if (err.message) {
-        errorMsg = err.message
-      }
-
-      // Firebase functions errors wrap the message
-      if (err.details) {
-        errorMsg = err.details
-      }
-
-      // If it's still a generic error, provide more context
-      if (errorMsg.includes('INTERNAL') || errorMsg.includes('internal')) {
-        errorMsg = 'Server error - check console for details'
-      }
-
+      // Show the actual error — details is set when the Cloud Function throws HttpsError
+      const errorMsg = err.details || err.message || 'Failed to create account'
       toast.error(errorMsg)
     } finally {
       setLoading(false)

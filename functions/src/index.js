@@ -1,6 +1,5 @@
 import { https, setGlobalOptions } from 'firebase-functions'
 import admin from 'firebase-admin'
-import { chromium } from 'playwright'
 import axios from 'axios'
 
 setGlobalOptions({ region: 'us-central1', memory: '2GB' })
@@ -185,7 +184,8 @@ export const startSubmissionJob = https.onCall({ timeoutSeconds: 540 }, async (r
 
       await logToJob(jobId, `Found ${directories.length} directories for submission`, 'info')
 
-      // Launch browser
+      // Launch browser (dynamic import to keep deployment size manageable)
+      const { chromium } = await import('playwright')
       const browser = await chromium.launch({ headless: true })
       const context = await browser.createBrowserContext()
       let submitted = 0
@@ -665,11 +665,12 @@ export const verifyPendingEmails = https.onCall(async (request) => {
 // ─── Create User with Optional Client ────────────────────────────────────────
 
 export const createUserWithClient = https.onCall(async (request) => {
-  const { email, password, role = 'client', businessData } = request.data
+  const { email, password, role = 'client', businessData, minimal = false } = request.data
 
   console.log('=== createUserWithClient called ===')
   console.log('Email:', email)
   console.log('Role:', role)
+  console.log('Minimal:', minimal)
   console.log('BusinessData:', businessData ? 'PROVIDED' : 'NOT PROVIDED')
   console.log('Request auth:', request.auth ? 'AUTHENTICATED' : 'NOT AUTHENTICATED')
 
@@ -692,14 +693,21 @@ export const createUserWithClient = https.onCall(async (request) => {
     throw new https.HttpsError('invalid-argument', msg)
   }
 
-  // Validate businessData if provided
-  if (businessData && role === 'client') {
+  // Full validation only when not in minimal/quick mode
+  if (businessData && role === 'client' && !minimal) {
     const required = ['businessName', 'phone', 'accountEmail', 'website', 'category', 'address', 'city', 'state', 'zip']
     const missing = required.filter(field => !businessData[field])
     if (missing.length > 0) {
       const msg = `Missing required fields: ${missing.join(', ')}`
       console.error(msg)
       throw new https.HttpsError('invalid-argument', msg)
+    }
+  }
+
+  // Minimal mode: only businessName and accountEmail required
+  if (businessData && role === 'client' && minimal) {
+    if (!businessData.businessName) {
+      throw new https.HttpsError('invalid-argument', 'Business name required')
     }
   }
 
@@ -830,7 +838,7 @@ export const createCheckoutSession = https.onCall(async (request) => {
     }
 
     // Import Stripe
-    const Stripe = require('stripe')
+    const { default: Stripe } = await import('stripe')
     const stripe = new Stripe(settings.stripeApiKey)
 
     // Get package details
@@ -996,7 +1004,7 @@ export const stripeWebhook = https.onRequest(async (request, response) => {
     }
 
     // Verify webhook signature
-    const Stripe = require('stripe')
+    const { default: Stripe } = await import('stripe')
     const stripe = new Stripe(settings.stripeApiKey)
 
     const sig = request.headers['stripe-signature']
