@@ -27,7 +27,8 @@ const schema = z.object({
   upgradeFromPackageId:  z.string().optional(),
   upgradePrice:          z.coerce.number().min(0, 'Must be 0 or more').optional(),
   packageType:           z.enum(['citation', 'tool']).default('citation'),
-  toolLink:              z.string().url('Must be a valid URL').optional(),
+  // Allow empty string (form default) OR a valid URL
+  toolLink:              z.union([z.literal(''), z.string().url('Must be a valid URL')]).optional(),
   toolCtaText:           z.string().max(20, 'Keep it short').optional(),
 })
 

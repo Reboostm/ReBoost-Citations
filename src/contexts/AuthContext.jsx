@@ -44,6 +44,7 @@ export function AuthProvider({ children }) {
   const resetPassword = (email) => sendPasswordResetEmail(auth, email)
 
   const isAdmin = userProfile?.role === 'admin'
+  const isStaff = userProfile?.role === 'staff'
   const isClient = userProfile?.role === 'client'
 
   return (
@@ -56,6 +57,7 @@ export function AuthProvider({ children }) {
       logout,
       resetPassword,
       isAdmin,
+      isStaff,
       isClient,
     }}>
       {!loading && children}

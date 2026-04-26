@@ -21,6 +21,15 @@ const adminNav = [
   { to: '/admin/settings',    label: 'Settings',     icon: Settings },
 ]
 
+// Staff see a limited version — no Users, Settings, Analytics, Directories, Packages
+const staffNav = [
+  { to: '/admin',            label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/admin/clients',   label: 'Clients',   icon: Users },
+  { to: '/admin/jobs',      label: 'Jobs',      icon: Briefcase },
+  { to: '/admin/reports',   label: 'Reports',   icon: BarChart2 },
+  { to: '/admin/support',   label: 'Support',   icon: MessageSquare },
+]
+
 const clientNav = [
   { to: '/dashboard',          label: 'Overview',    icon: LayoutDashboard, end: true },
   { to: '/dashboard/citations', label: 'Citations',  icon: Globe },
@@ -48,9 +57,9 @@ function NavItem({ to, label, icon: Icon, end }) {
 }
 
 export default function Sidebar({ mobile = false, onClose }) {
-  const { userProfile, logout, isAdmin } = useAuth()
+  const { userProfile, logout, isAdmin, isStaff } = useAuth()
   const navigate = useNavigate()
-  const nav = isAdmin ? adminNav : clientNav
+  const nav = isAdmin ? adminNav : isStaff ? staffNav : clientNav
 
   const handleLogout = async () => {
     await logout()
@@ -78,9 +87,9 @@ export default function Sidebar({ mobile = false, onClose }) {
       <div className="px-4 pt-4 pb-1">
         <span className={cn(
           'text-xs font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full',
-          isAdmin ? 'bg-brand-50 text-brand-700' : 'bg-green-50 text-green-700',
+          isAdmin ? 'bg-brand-50 text-brand-700' : isStaff ? 'bg-purple-50 text-purple-700' : 'bg-green-50 text-green-700',
         )}>
-          {isAdmin ? 'Admin' : 'Client'}
+          {isAdmin ? 'Admin' : isStaff ? 'Staff' : 'Client'}
         </span>
       </div>
 

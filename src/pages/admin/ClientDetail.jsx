@@ -37,16 +37,23 @@ export default function ClientDetail() {
   const [saving, setSaving]   = useState(false)
 
   const load = async () => {
-    const [c, cit, j] = await Promise.all([
-      getClient(id),
-      getCitationsForClient(id),
-      getJobsForClient(id),
-    ])
-    if (!c) { navigate('/admin/clients'); return }
-    setClient(c)
-    setCitations(cit)
-    setJobs(j)
-    setLoading(false)
+    try {
+      const [c, cit, j] = await Promise.all([
+        getClient(id),
+        getCitationsForClient(id).catch(() => []),
+        getJobsForClient(id).catch(() => []),
+      ])
+      if (!c) { navigate('/admin/clients'); return }
+      setClient(c)
+      setCitations(cit)
+      setJobs(j)
+    } catch (err) {
+      console.error('Error loading client:', err)
+      toast.error('Error loading client data')
+      navigate('/admin/clients')
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [id])

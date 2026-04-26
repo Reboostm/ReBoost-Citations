@@ -37,7 +37,8 @@ function ProtectedRoute({ children, requireAdmin = false }) {
 
   if (loading) return <div className="flex h-screen items-center justify-center">Loading...</div>
   if (!currentUser) return <Navigate to="/login" />
-  if (requireAdmin && userProfile?.role !== 'admin') return <Navigate to="/dashboard" />
+  // Staff can access admin area (limited sidebar shown in Sidebar.jsx)
+  if (requireAdmin && !['admin', 'staff'].includes(userProfile?.role)) return <Navigate to="/dashboard" />
 
   return children
 }

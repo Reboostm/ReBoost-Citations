@@ -20,15 +20,13 @@ import toast from 'react-hot-toast'
 const createSchema = z.object({
   email:               z.string().email('Invalid email'),
   password:            z.string().min(6, 'Password must be at least 6 characters'),
-  role:                z.enum(['admin', 'staff', 'client']),
-  clientId:            z.string().optional(),
+  role:                z.enum(['admin', 'staff']),
   sendPasswordReset:   z.boolean().optional(),
 })
 
 const editSchema = z.object({
-  email:    z.string().email('Invalid email'),
-  role:     z.enum(['admin', 'staff', 'client']),
-  clientId: z.string().optional(),
+  email: z.string().email('Invalid email'),
+  role:  z.enum(['admin', 'staff']),
 })
 
 function UserForm({ user, clients, onSubmit, loading }) {
@@ -38,10 +36,9 @@ function UserForm({ user, clients, onSubmit, loading }) {
   const { register, handleSubmit, formState: { errors }, watch } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
-      email:             user?.email    ?? '',
+      email:             user?.email ?? '',
       password:          '',
-      role:              user?.role     ?? 'client',
-      clientId:          user?.clientId ?? '',
+      role:              user?.role === 'client' ? 'staff' : (user?.role ?? 'staff'),
       sendPasswordReset: false,
     },
   })
@@ -84,13 +81,15 @@ function UserForm({ user, clients, onSubmit, loading }) {
         label="Role *"
         placeholder="Select role"
         options={[
-          { value: 'admin', label: '🔐 Admin (Full Access) - You only' },
-          { value: 'staff', label: '👥 Staff (Limited Access) - Your employees' },
-          { value: 'client', label: '🏢 Client (Customer) - Business customers' },
+          { value: 'admin', label: 'Admin (Full Access) - You only' },
+          { value: 'staff', label: 'Staff (Limited Access) - Your employees' },
         ]}
         error={errors.role?.message}
         {...register('role')}
       />
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-800">
+        To add a business client, use the <strong>Clients</strong> tab instead.
+      </div>
 
       {role === 'staff' && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
@@ -302,8 +301,10 @@ export default function Users() {
                       </div>
                     </td>
                     <td className="px-5 py-3">
-                      <Badge color={user.role === 'admin' ? 'purple' : 'blue'}>
-                        {user.role === 'admin' ? <><Shield className="w-3 h-3 mr-1" />Admin</> : 'Client'}
+                      <Badge color={user.role === 'admin' ? 'purple' : user.role === 'staff' ? 'blue' : 'green'}>
+                        {user.role === 'admin'
+                          ? <><Shield className="w-3 h-3 mr-1" />Admin</>
+                          : user.role === 'staff' ? 'Staff' : 'Client'}
                       </Badge>
                     </td>
                     <td className="px-5 py-3 text-gray-500">
